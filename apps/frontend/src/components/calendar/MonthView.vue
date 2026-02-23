@@ -1,5 +1,5 @@
 <template>
-  <div class="month-view">
+  <div class="month-view" @touchstart="swipe.onTouchStart" @touchend="swipe.onTouchEnd">
     <div class="month-nav">
       <button class="nav-btn" @click="prevMonth">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -44,6 +44,7 @@ import { ref, computed, watch } from 'vue';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useNotesStore } from '@/stores/notes';
+import { useSwipe } from '@/composables/useSwipe';
 
 const props = defineProps<{
   selectedDate: string;
@@ -57,6 +58,11 @@ const emit = defineEmits<{
 const eventsStore = useEventsStore();
 const calendarsStore = useCalendarsStore();
 const notesStore = useNotesStore();
+
+const swipe = useSwipe(
+  () => nextMonth(),
+  () => prevMonth(),
+);
 
 const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 

@@ -1,5 +1,24 @@
 <template>
-  <div class="calendar-view">
+  <div
+    class="calendar-view"
+    @touchstart="ptr.onTouchStart"
+    @touchmove="ptr.onTouchMove"
+    @touchend="ptr.onTouchEnd"
+  >
+    <!-- Pull-to-refresh indicator -->
+    <div class="pull-indicator" :style="{ height: ptr.pullDistance.value + 'px' }">
+      <div v-if="ptr.refreshing.value" class="pull-spinner"></div>
+      <svg
+        v-else-if="ptr.pulling.value"
+        class="pull-arrow"
+        :class="{ 'pull-ready': ptr.pullDistance.value >= 80 }"
+        viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"
+      >
+        <polyline points="7 13 12 18 17 13"/>
+        <line x1="12" y1="2" x2="12" y2="18"/>
+      </svg>
+    </div>
+
     <header class="cal-header">
       <h1>Calendrier</h1>
       <div class="view-tabs">
@@ -39,6 +58,8 @@ import { useRouter } from 'vue-router';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useNotesStore } from '@/stores/notes';
+import { usePullToRefresh } from '@/composables/usePullToRefresh';
+import { useSync } from '@/composables/useSync';
 import MonthView from '@/components/calendar/MonthView.vue';
 import WeekView from '@/components/calendar/WeekView.vue';
 import AgendaView from '@/components/calendar/AgendaView.vue';
@@ -49,6 +70,14 @@ const router = useRouter();
 const eventsStore = useEventsStore();
 const calendarsStore = useCalendarsStore();
 const notesStore = useNotesStore();
+const { sync } = useSync();
+
+const ptr = usePullToRefresh(async () => {
+  await sync();
+  await eventsStore.loadFromLocal();
+  await calendarsStore.loadFromLocal();
+  await notesStore.loadFromLocal();
+});
 
 const currentView = ref<'month' | 'week' | 'agenda'>('month');
 const selectedDate = ref(new Date().toISOString().split('T')[0]);
@@ -119,6 +148,40 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+}
+
+.pull-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  flex-shrink: 0;
+  transition: height 0.2s;
+}
+
+.pull-arrow {
+  transition: transform 0.2s;
+  color: var(--color-text-secondary);
+  transform: rotate(180deg);
+}
+
+.pull-arrow.pull-ready {
+  transform: rotate(0deg);
+  color: var(--color-primary);
+}
+
+.pull-spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .cal-header {

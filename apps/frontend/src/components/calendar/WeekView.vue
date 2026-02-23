@@ -1,5 +1,5 @@
 <template>
-  <div class="week-view">
+  <div class="week-view" @touchstart="swipe.onTouchStart" @touchend="swipe.onTouchEnd">
     <div class="week-nav">
       <button class="nav-btn" @click="prevWeek">
         <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
@@ -88,6 +88,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
+import { useSwipe } from '@/composables/useSwipe';
 
 const props = defineProps<{
   selectedDate: string;
@@ -100,6 +101,11 @@ const emit = defineEmits<{
 
 const eventsStore = useEventsStore();
 const calendarsStore = useCalendarsStore();
+
+const swipe = useSwipe(
+  () => nextWeek(),
+  () => prevWeek(),
+);
 
 const gridContainer = ref<HTMLElement | null>(null);
 
