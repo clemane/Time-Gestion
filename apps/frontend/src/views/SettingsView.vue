@@ -29,6 +29,29 @@
       </router-link>
     </div>
 
+    <!-- Shared with me -->
+    <div class="settings-section">
+      <h2 class="section-title">Partages recus</h2>
+      <div v-if="sharesStore.loading" class="shares-loading">
+        Chargement...
+      </div>
+      <div v-else-if="sharesStore.sharedWithMe.length === 0" class="shares-empty">
+        Aucun partage recu
+      </div>
+      <div v-else class="shares-list">
+        <div v-for="share in sharesStore.sharedWithMe" :key="share.id" class="share-card">
+          <div class="share-card-icon">
+            {{ resourceIcon(share.resourceType) }}
+          </div>
+          <div class="share-card-info">
+            <span class="share-card-type">{{ resourceLabel(share.resourceType) }}</span>
+            <span class="share-card-perm">{{ share.permission === 'READ' ? 'Lecture seule' : 'Lecture et ecriture' }}</span>
+          </div>
+          <span class="share-card-from">de {{ share.ownerId }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Logout -->
     <div class="settings-section">
       <button class="btn-logout" @click="handleLogout">
@@ -39,12 +62,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { useSharesStore } from '@/stores/shares';
+import type { ResourceType } from '@time-gestion/shared';
 
 const router = useRouter();
 const auth = useAuthStore();
+const sharesStore = useSharesStore();
 
 const initials = computed(() => {
   if (!auth.user?.displayName) return '?';
@@ -56,15 +82,39 @@ const initials = computed(() => {
     .substring(0, 2);
 });
 
+function resourceIcon(type: ResourceType): string {
+  switch (type) {
+    case 'NOTE': return '\u{1f4dd}';
+    case 'FOLDER': return '\u{1f4c1}';
+    case 'CALENDAR': return '\u{1f4c5}';
+    default: return '\u{1f4c4}';
+  }
+}
+
+function resourceLabel(type: ResourceType): string {
+  switch (type) {
+    case 'NOTE': return 'Note';
+    case 'FOLDER': return 'Dossier';
+    case 'CALENDAR': return 'Calendrier';
+    default: return type;
+  }
+}
+
 async function handleLogout() {
   await auth.logout();
   router.push('/login');
 }
+
+onMounted(() => {
+  sharesStore.loadSharedWithMe();
+});
 </script>
 
 <style scoped>
 .settings-view {
   padding-bottom: 32px;
+  overflow-y: auto;
+  height: 100%;
 }
 
 .settings-header {
@@ -154,6 +204,60 @@ async function handleLogout() {
 
 .link-arrow {
   color: var(--color-text-secondary);
+}
+
+.shares-loading,
+.shares-empty {
+  padding: 16px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius);
+}
+
+.shares-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.share-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius);
+}
+
+.share-card-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.share-card-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.share-card-type {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.share-card-perm {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+.share-card-from {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
 }
 
 .btn-logout {

@@ -19,6 +19,7 @@
     <div v-if="showMenu" class="dropdown-menu">
       <button @click="pickDate">&#x1f4c5; Assigner une date</button>
       <button @click="pickCategory">&#x1f3f7;&#xfe0f; Categorie</button>
+      <button @click="openShare">&#x1f517; Partager</button>
       <button @click="deleteNote" class="danger">&#x1f5d1;&#xfe0f; Supprimer</button>
     </div>
 
@@ -59,6 +60,14 @@
         </button>
       </div>
     </div>
+
+    <!-- Share dialog -->
+    <ShareDialog
+      v-if="showShareDialog"
+      resource-type="NOTE"
+      :resource-id="noteId"
+      @close="showShareDialog = false"
+    />
   </div>
 </template>
 
@@ -68,6 +77,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useNotesStore } from '@/stores/notes';
 import { useCategoriesStore } from '@/stores/categories';
 import NoteEditor from '@/components/editor/NoteEditor.vue';
+import ShareDialog from '@/components/sharing/ShareDialog.vue';
 import type { CategoryStyle } from '@time-gestion/shared';
 
 const route = useRoute();
@@ -84,6 +94,7 @@ const content = ref<Record<string, unknown>>({});
 const showMenu = ref(false);
 const showDatePicker = ref(false);
 const showCategoryPicker = ref(false);
+const showShareDialog = ref(false);
 const scheduledDate = ref('');
 const scheduledTime = ref('');
 
@@ -132,6 +143,11 @@ async function saveDate() {
 async function clearDate() {
   await notesStore.update(noteId.value, { scheduledDate: null, scheduledTime: null });
   showDatePicker.value = false;
+}
+
+function openShare() {
+  showMenu.value = false;
+  showShareDialog.value = true;
 }
 
 function pickCategory() {
