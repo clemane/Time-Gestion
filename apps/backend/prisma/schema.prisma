@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  displayName  String   @map("display_name")
+  avatarUrl    String?  @map("avatar_url")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  notes      Note[]
+  folders    Folder[]
+  categories Category[]
+  calendars  Calendar[]
+  events     CalendarEvent[]
+  ownedShares    Share[] @relation("ShareOwner")
+  receivedShares Share[] @relation("ShareReceiver")
+
+  @@map("users")
+}
+
+model Folder {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  parentId  String?   @map("parent_id") @db.Uuid
+  name      String
+  sortOrder Int       @default(0) @map("sort_order")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent   Folder?  @relation("FolderTree", fields: [parentId], references: [id])
+  children Folder[] @relation("FolderTree")
+  notes    Note[]
+
+  @@map("folders")
+}
+
+model Category {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  name           String
+  icon           String?
+  style          Json
+  defaultContent Json?     @map("default_content")
+  isDefault      Boolean   @default(false) @map("is_default")
+  sortOrder      Int       @default(0) @map("sort_order")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  notes Note[]
+
+  @@map("categories")
+}
+
+model Note {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  folderId      String?   @map("folder_id") @db.Uuid
+  categoryId    String?   @map("category_id") @db.Uuid
+  title         String
+  content       Json      @default("{}")
+  isPinned      Boolean   @default(false) @map("is_pinned")
+  scheduledDate DateTime? @map("scheduled_date") @db.Date
+  scheduledTime String?   @map("scheduled_time") @db.VarChar(5)
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder   Folder?   @relation(fields: [folderId], references: [id])
+  category Category? @relation(fields: [categoryId], references: [id])
+  events   CalendarEvent[]
+
+  @@map("notes")
+}
+
+model Calendar {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  name      String
+  color     String    @db.VarChar(7)
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events CalendarEvent[]
+
+  @@map("calendars")
+}
+
+model CalendarEvent {
+  id              String    @id @default(uuid()) @db.Uuid
+  calendarId      String    @map("calendar_id") @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  title           String
+  description     String?
+  startAt         DateTime  @map("start_at")
+  endAt           DateTime  @map("end_at")
+  allDay          Boolean   @default(false) @map("all_day")
+  recurrenceRule  String?   @map("recurrence_rule")
+  reminderMinutes Int?      @map("reminder_minutes")
+  noteId          String?   @map("note_id") @db.Uuid
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  deletedAt       DateTime? @map("deleted_at")
+
+  calendar Calendar @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  note     Note?    @relation(fields: [noteId], references: [id])
+
+  @@map("calendar_events")
+}
+
+model Share {
+  id           String   @id @default(uuid()) @db.Uuid
+  resourceType String   @map("resource_type")
+  resourceId   String   @map("resource_id") @db.Uuid
+  ownerId      String   @map("owner_id") @db.Uuid
+  sharedWithId String   @map("shared_with_id") @db.Uuid
+  permission   String
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  owner      User @relation("ShareOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  sharedWith User @relation("ShareReceiver", fields: [sharedWithId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceType, resourceId, sharedWithId])
+  @@map("shares")
+}
