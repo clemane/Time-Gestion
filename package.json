@@ -1,0 +1,18 @@
+{
+  "name": "time-gestion",
+  "private": true,
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev": "pnpm run --parallel dev:backend dev:frontend",
+    "build": "pnpm run --parallel build:backend build:frontend",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "test": "pnpm run --recursive test",
+    "lint": "pnpm run --recursive lint"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=10.0.0"
+  }
+}
