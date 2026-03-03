@@ -270,7 +270,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   overflow-y: auto;
-  background: var(--color-bg, #F2F2F7);
+  background: var(--color-bg);
 }
 
 /* Pull-to-refresh */

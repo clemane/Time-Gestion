@@ -1,5 +1,5 @@
 <template>
-  <div class="meal-slot" :class="{ 'has-recipe': recipeName }"
+  <div class="meal-slot" :class="{ 'has-recipe': recipeName }">
     <div class="slot-header">
       <span class="slot-name">{{ slot.slotName }}</span>
       <button class="slot-action" @click="$emit('remove')">
