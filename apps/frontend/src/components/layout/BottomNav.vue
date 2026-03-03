@@ -1,80 +1,84 @@
 <template>
-  <nav class="bottom-nav">
-    <RouterLink to="/notes" class="nav-item" :class="{ active: route.path.startsWith('/notes') }">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14 2 14 8 20 8"/>
-        <line x1="16" y1="13" x2="8" y2="13"/>
-        <line x1="16" y1="17" x2="8" y2="17"/>
-        <polyline points="10 9 9 9 8 9"/>
-      </svg>
-      <span>Notes</span>
-    </RouterLink>
-    <RouterLink to="/calendar" class="nav-item" :class="{ active: route.path === '/calendar' }">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-        <line x1="16" y1="2" x2="16" y2="6"/>
-        <line x1="8" y1="2" x2="8" y2="6"/>
-        <line x1="3" y1="10" x2="21" y2="10"/>
-      </svg>
-      <span>Calendrier</span>
-    </RouterLink>
-    <RouterLink to="/search" class="nav-item" :class="{ active: route.path === '/search' }">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <span>Recherche</span>
-    </RouterLink>
-    <RouterLink to="/settings" class="nav-item" :class="{ active: route.path === '/settings' }">
-      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-      </svg>
-      <span>Params</span>
+  <nav class="floating-nav">
+    <RouterLink
+      v-for="item in navItems"
+      :key="item.to"
+      :to="item.to"
+      class="nav-item"
+      :class="{ active: isActive(item.to) }"
+    >
+      <component :is="item.icon" :size="20" :stroke-width="isActive(item.to) ? 2.2 : 1.6" />
+      <span class="nav-label">{{ item.label }}</span>
     </RouterLink>
   </nav>
 </template>
 
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router';
+import { FileText, Calendar, UtensilsCrossed, Settings } from 'lucide-vue-next';
+
 const route = useRoute();
+
+const navItems = [
+  { to: '/notes', label: 'Notes', icon: FileText },
+  { to: '/calendar', label: 'Calendrier', icon: Calendar },
+  { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
+  { to: '/settings', label: 'Reglages', icon: Settings },
+];
+
+function isActive(path: string): boolean {
+  return route.path === path || route.path.startsWith(path + '/');
+}
 </script>
 
 <style scoped>
-.bottom-nav {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  height: 56px;
-  padding-bottom: var(--safe-area-bottom);
-  background: var(--color-bg);
-  border-top: 1px solid var(--color-border);
+.floating-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: calc(16px + var(--safe-area-bottom));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 100;
+  display: flex;
+  gap: 4px;
+  padding: 6px 8px;
+  background: var(--bar-bg);
+  backdrop-filter: blur(var(--bar-blur)) saturate(1.6);
+  -webkit-backdrop-filter: blur(var(--bar-blur)) saturate(1.6);
+  border: 1px solid var(--bar-border);
+  border-radius: 24px;
+  box-shadow: var(--shadow-lg);
 }
 
 .nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 2px;
-  color: var(--color-text-secondary);
+  padding: 8px 16px;
+  color: var(--color-text-tertiary);
   text-decoration: none;
-  font-size: 11px;
-  padding: 4px 12px;
-  transition: color 0.2s;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  border-radius: 18px;
+  transition: color var(--transition-fast), background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-item.active {
-  color: var(--color-primary);
+  color: white;
+  background: var(--color-primary);
 }
 
-.nav-item svg {
-  width: 22px;
-  height: 22px;
+.nav-label {
+  line-height: 1;
+}
+
+/* Hide on desktop */
+@media (min-width: 1025px) {
+  .floating-nav {
+    display: none;
+  }
 }
 </style>
