@@ -33,6 +33,7 @@
       <TotoroMascot v-if="isTotoro" />
     </Transition>
 
+    <InstallBanner />
     <BottomNav />
   </div>
 </template>
@@ -42,6 +43,7 @@ import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import BottomNav from './BottomNav.vue';
 import TotoroMascot from '@/components/ui/TotoroMascot.vue';
+import InstallBanner from '@/components/ui/InstallBanner.vue';
 import { isOnline } from '@/sync/online';
 import { useTheme } from '@/composables/useTheme';
 import { FileText, Calendar, UtensilsCrossed, Settings, WifiOff } from 'lucide-vue-next';
