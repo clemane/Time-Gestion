@@ -2,15 +2,11 @@
   <div class="month-view" @touchstart="swipe.onTouchStart" @touchend="swipe.onTouchEnd">
     <div class="month-nav">
       <button class="nav-btn" @click="prevMonth">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <ChevronLeft :size="20" />
       </button>
       <span class="month-label">{{ monthLabel }}</span>
       <button class="nav-btn" @click="nextMonth">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <ChevronRight :size="20" />
       </button>
     </div>
 
@@ -45,9 +41,11 @@ import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useNotesStore } from '@/stores/notes';
 import { useSwipe } from '@/composables/useSwipe';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 const props = defineProps<{
   selectedDate: string;
+  selectedGroupId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -66,11 +64,9 @@ const swipe = useSwipe(
 
 const dayNames = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
-// Current displayed month (year and month index)
 const displayYear = ref(new Date().getFullYear());
-const displayMonth = ref(new Date().getMonth()); // 0-based
+const displayMonth = ref(new Date().getMonth());
 
-// When selectedDate changes from parent, update display month
 watch(() => props.selectedDate, (val) => {
   if (val) {
     const d = new Date(val + 'T00:00:00');
@@ -84,11 +80,11 @@ const monthLabel = computed(() => {
   return d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 });
 
-// Build map of date -> dot colors
 const eventDotsMap = computed(() => {
   const map: Record<string, string[]> = {};
 
   for (const evt of eventsStore.events) {
+    if (props.selectedGroupId && evt.calendarId !== props.selectedGroupId) continue;
     const dateStr = evt.startAt.split('T')[0];
     const cal = calendarsStore.calendars.find(c => c.id === evt.calendarId);
     const color = cal?.color || '#4f46e5';
@@ -99,11 +95,14 @@ const eventDotsMap = computed(() => {
   }
 
   for (const note of notesStore.notes) {
+    if (props.selectedGroupId && note.calendarId !== props.selectedGroupId) continue;
     if (note.scheduledDate) {
       const dateStr = note.scheduledDate.split('T')[0];
+      const cal = note.calendarId ? calendarsStore.calendars.find(c => c.id === note.calendarId) : null;
+      const color = cal?.color || '#6b7280';
       if (!map[dateStr]) map[dateStr] = [];
-      if (!map[dateStr].includes('#6b7280')) {
-        map[dateStr].push('#6b7280');
+      if (!map[dateStr].includes(color)) {
+        map[dateStr].push(color);
       }
     }
   }
@@ -127,13 +126,11 @@ const calendarDays = computed<CalendarDay[]>(() => {
   const firstOfMonth = new Date(year, month, 1);
   const lastOfMonth = new Date(year, month + 1, 0);
 
-  // Day of week for first day (0=Sun..6=Sat) -> convert to Monday-based (0=Mon..6=Sun)
   let startDow = firstOfMonth.getDay() - 1;
-  if (startDow < 0) startDow = 6; // Sunday becomes 6
+  if (startDow < 0) startDow = 6;
 
   const days: CalendarDay[] = [];
 
-  // Previous month padding
   const prevMonthLast = new Date(year, month, 0);
   for (let i = startDow - 1; i >= 0; i--) {
     const d = prevMonthLast.getDate() - i;
@@ -147,7 +144,6 @@ const calendarDays = computed<CalendarDay[]>(() => {
     });
   }
 
-  // Current month days
   for (let d = 1; d <= lastOfMonth.getDate(); d++) {
     const dateStr = formatDateStr(year, month, d);
     days.push({
@@ -159,7 +155,6 @@ const calendarDays = computed<CalendarDay[]>(() => {
     });
   }
 
-  // Next month padding to fill 6 rows (42 cells)
   const remaining = 42 - days.length;
   for (let d = 1; d <= remaining; d++) {
     const dateStr = formatDateStr(year, month + 1, d);
@@ -176,7 +171,6 @@ const calendarDays = computed<CalendarDay[]>(() => {
 });
 
 function formatDateStr(year: number, month: number, day: number): string {
-  // Use Date constructor to handle month overflow/underflow
   const d = new Date(year, month, day);
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -211,116 +205,139 @@ function selectDay(dateStr: string) {
 
 <style scoped>
 .month-view {
-  padding: 0 12px;
+  padding: 0 16px;
+  background: var(--color-bg);
 }
 
 .month-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 4px;
+  padding: 12px 4px 8px;
 }
 
 .nav-btn {
   background: none;
   border: none;
-  padding: 6px;
+  padding: 8px;
   cursor: pointer;
-  color: var(--color-text);
-  border-radius: var(--radius);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn:hover {
-  background: var(--color-bg-secondary);
+  opacity: 0.7;
+}
+
+.nav-btn:active {
+  opacity: 0.5;
 }
 
 .month-label {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 600;
   text-transform: capitalize;
+  color: var(--color-text);
 }
 
 .day-names {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  padding: 4px 0;
+  padding: 8px 0 4px;
 }
 
 .day-name {
-  font-size: 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
   font-weight: 600;
   color: var(--color-text-secondary);
   padding: 4px 0;
+  text-transform: uppercase;
 }
 
 .month-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 1px;
+  gap: 0;
 }
 
 .day-cell {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 6px 2px;
+  padding: 4px 2px;
   cursor: pointer;
-  border-radius: var(--radius);
-  min-height: 44px;
+  border-radius: 0;
+  min-height: 48px;
+  background: var(--color-bg);
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .day-cell:hover {
   background: var(--color-bg-secondary);
 }
 
+.day-cell:active {
+  background: var(--color-bg-secondary);
+}
+
 .day-cell.other-month .day-number {
-  color: var(--color-text-secondary);
-  opacity: 0.4;
+  color: var(--color-text-tertiary);
 }
 
 .day-cell.is-today .day-number {
-  background: var(--color-primary-light);
-  color: white;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  color: var(--color-accent);
+  font-weight: 600;
+  border-bottom: 2px solid var(--color-accent);
 }
 
 .day-cell.is-selected {
-  background: rgba(79, 70, 229, 0.1);
+  background: var(--color-primary-ghost);
 }
 
 .day-cell.is-selected .day-number {
   background: var(--color-primary);
   color: white;
-  border-radius: 50%;
-  width: 28px;
-  height: 28px;
+  border-radius: var(--radius-full);
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 600;
+  border-bottom: none;
+}
+
+.day-cell.is-today.is-selected .day-number {
+  background: var(--color-primary);
+  color: white;
+  border-bottom: none;
 }
 
 .day-number {
+  font-family: var(--font-body);
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-full);
+  color: var(--color-text);
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .dots {
   display: flex;
-  gap: 2px;
+  gap: 3px;
   margin-top: 2px;
 }
 

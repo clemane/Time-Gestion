@@ -1,32 +1,37 @@
 <template>
   <div class="agenda-view">
-    <div v-if="agendaDays.length === 0" class="agenda-empty">
-      Aucun evenement dans les 30 prochains jours
-    </div>
-    <div v-for="day in agendaDays" :key="day.dateStr" class="agenda-day">
-      <div class="agenda-day-header">
-        <div class="agenda-day-num">{{ day.dayNum }}</div>
-        <div class="agenda-day-info">
-          <div class="agenda-day-name">{{ day.dayName }}</div>
-          <div class="agenda-day-month">{{ day.monthName }}</div>
+    <EmptyState
+      v-if="agendaDays.length === 0"
+      :icon="CalendarOff"
+      title="Aucun evenement"
+      description="Aucun evenement dans les 30 prochains jours"
+    />
+    <TransitionGroup v-else name="list-stagger" appear>
+      <div v-for="(day, dayIndex) in agendaDays" :key="day.dateStr" class="agenda-day" :style="{ '--stagger-delay': `${dayIndex * 60}ms` }">
+        <div class="agenda-day-header">
+          <div class="agenda-day-num">{{ day.dayNum }}</div>
+          <div class="agenda-day-info">
+            <div class="agenda-day-name">{{ day.dayName }}</div>
+            <div class="agenda-day-month">{{ day.monthName }}</div>
+          </div>
         </div>
-      </div>
-      <div class="agenda-items">
-        <div
-          v-for="item in day.items"
-          :key="item.id"
-          class="agenda-item"
-          @click="item.onClick"
-        >
-          <span class="agenda-dot" :style="{ background: item.color }"></span>
-          <div class="agenda-item-content">
-            <div class="agenda-item-title">{{ item.title }}</div>
-            <div v-if="item.time" class="agenda-item-time">{{ item.time }}</div>
-            <div v-if="item.isAllDay" class="agenda-item-time">Toute la journee</div>
+        <div class="agenda-items">
+          <div
+            v-for="item in day.items"
+            :key="item.id"
+            class="agenda-item"
+            @click="item.onClick"
+          >
+            <span class="agenda-dot" :style="{ background: item.color }"></span>
+            <div class="agenda-item-content">
+              <div class="agenda-item-title">{{ item.title }}</div>
+              <div v-if="item.time" class="agenda-item-time">{{ item.time }}</div>
+              <div v-if="item.isAllDay" class="agenda-item-time">Toute la journee</div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
   </div>
 </template>
 
@@ -36,9 +41,12 @@ import { useRouter } from 'vue-router';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useNotesStore } from '@/stores/notes';
+import { CalendarOff } from 'lucide-vue-next';
+import EmptyState from '@/components/ui/EmptyState.vue';
 
 const props = defineProps<{
   selectedDate: string;
+  selectedGroupId?: string | null;
 }>();
 
 const router = useRouter();
@@ -80,8 +88,8 @@ const agendaDays = computed<AgendaDay[]>(() => {
     const dateStr = formatDateStr(d);
     const items: AgendaItem[] = [];
 
-    // Events for this day
     for (const evt of eventsStore.events) {
+      if (props.selectedGroupId && evt.calendarId !== props.selectedGroupId) continue;
       const evtDate = evt.startAt.split('T')[0];
       if (evtDate === dateStr) {
         const cal = calendarsStore.calendars.find(c => c.id === evt.calendarId);
@@ -97,24 +105,23 @@ const agendaDays = computed<AgendaDay[]>(() => {
           time,
           isAllDay: evt.allDay,
           color,
-          onClick: () => {
-            // Could open event form; for now just a no-op
-          },
+          onClick: () => {},
         });
       }
     }
 
-    // Dated notes for this day
     for (const note of notesStore.notes) {
+      if (props.selectedGroupId && note.calendarId !== props.selectedGroupId) continue;
       if (note.scheduledDate) {
         const noteDate = note.scheduledDate.split('T')[0];
         if (noteDate === dateStr) {
+          const noteCal = note.calendarId ? calendarsStore.calendars.find(c => c.id === note.calendarId) : null;
           items.push({
             id: note.id,
             title: note.title,
             time: note.scheduledTime || '',
             isAllDay: false,
-            color: '#6b7280',
+            color: noteCal?.color || '#6b7280',
             onClick: () => {
               router.push(`/notes/${note.id}`);
             },
@@ -123,7 +130,6 @@ const agendaDays = computed<AgendaDay[]>(() => {
       }
     }
 
-    // Only include days with items (hide empty days)
     if (items.length > 0) {
       items.sort((a, b) => {
         if (a.isAllDay && !b.isAllDay) return -1;
@@ -149,31 +155,26 @@ const agendaDays = computed<AgendaDay[]>(() => {
 .agenda-view {
   flex: 1;
   overflow-y: auto;
-  padding: 0 16px 80px;
-}
-
-.agenda-empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 40px 16px;
-  font-size: 15px;
+  padding: 0 20px 80px;
+  background: var(--color-bg);
 }
 
 .agenda-day {
   display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--color-border);
+  gap: 16px;
+  padding: 16px 0;
+  border-bottom: 0.5px solid var(--color-border-subtle);
 }
 
 .agenda-day-header {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: flex-start;
-  min-width: 80px;
+  min-width: 88px;
 }
 
 .agenda-day-num {
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 700;
   line-height: 1;
@@ -181,41 +182,55 @@ const agendaDays = computed<AgendaDay[]>(() => {
 }
 
 .agenda-day-info {
-  padding-top: 2px;
+  padding-top: 3px;
 }
 
 .agenda-day-name {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   text-transform: capitalize;
   color: var(--color-text-secondary);
 }
 
 .agenda-day-month {
   font-size: 11px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   text-transform: capitalize;
+  margin-top: 2px;
 }
 
 .agenda-items {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 0;
 }
 
 .agenda-item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--color-bg-secondary);
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-bg-elevated);
+  border: none;
+  border-bottom: 0.5px solid var(--color-border-subtle);
   border-radius: var(--radius);
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+  margin-bottom: 4px;
+}
+
+.agenda-item:last-child {
+  border-bottom: none;
 }
 
 .agenda-item:hover {
-  opacity: 0.85;
+  background: var(--color-bg-secondary);
+}
+
+.agenda-item:active {
+  background: var(--color-bg-secondary);
 }
 
 .agenda-dot {
@@ -232,16 +247,18 @@ const agendaDays = computed<AgendaDay[]>(() => {
 }
 
 .agenda-item-title {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text);
 }
 
 .agenda-item-time {
-  font-size: 12px;
-  color: var(--color-text-secondary);
+  font-size: 13px;
+  color: var(--color-text-tertiary);
   margin-top: 2px;
+  font-weight: 400;
 }
 </style>

@@ -2,15 +2,11 @@
   <div class="week-view" @touchstart="swipe.onTouchStart" @touchend="swipe.onTouchEnd">
     <div class="week-nav">
       <button class="nav-btn" @click="prevWeek">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <ChevronLeft :size="20" />
       </button>
       <span class="week-label">{{ weekLabel }}</span>
       <button class="nav-btn" @click="nextWeek">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="9 18 15 12 9 6"/>
-        </svg>
+        <ChevronRight :size="20" />
       </button>
     </div>
 
@@ -47,7 +43,6 @@
     <!-- Time grid -->
     <div class="time-grid-container" ref="gridContainer">
       <div class="time-grid">
-        <!-- Hour rows: gutter + cells -->
         <div v-for="hour in hours" :key="hour" class="time-row">
           <div class="time-gutter">{{ String(hour).padStart(2, '0') }}:00</div>
           <div class="time-cells">
@@ -60,7 +55,6 @@
           </div>
         </div>
 
-        <!-- Event overlay: positioned within the cells area (after the gutter) -->
         <div class="events-overlay">
           <div
             v-for="block in eventBlocks"
@@ -89,9 +83,11 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useSwipe } from '@/composables/useSwipe';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 const props = defineProps<{
   selectedDate: string;
+  selectedGroupId?: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -109,15 +105,13 @@ const swipe = useSwipe(
 
 const gridContainer = ref<HTMLElement | null>(null);
 
-const hours = Array.from({ length: 16 }, (_, i) => i + 7); // 7:00 to 22:00
-const HOUR_HEIGHT = 60; // px per hour
+const hours = Array.from({ length: 16 }, (_, i) => i + 7);
+const HOUR_HEIGHT = 60;
 const START_HOUR = 7;
 const dayNamesShort = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 
-// Track which Monday the week starts from
 const weekStart = ref('');
 
-// Set weekStart from selectedDate
 watch(() => props.selectedDate, (val) => {
   if (val) {
     weekStart.value = getMonday(val);
@@ -127,7 +121,6 @@ watch(() => props.selectedDate, (val) => {
 function getMonday(dateStr: string): string {
   const d = new Date(dateStr + 'T00:00:00');
   const day = d.getDay();
-  // day: 0=Sun, 1=Mon...6=Sat -> offset to Monday
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return formatDateStr(d);
@@ -178,13 +171,13 @@ const weekLabel = computed(() => {
   return `${startStr} - ${endStr}`;
 });
 
-// All-day events
 const allDayEvents = computed(() => {
   const items: Array<{ id: string; title: string; color: string }> = [];
   const weekEnd = addDays(weekStart.value, 6);
 
   for (const evt of eventsStore.events) {
     if (!evt.allDay) continue;
+    if (props.selectedGroupId && evt.calendarId !== props.selectedGroupId) continue;
     const evtDate = evt.startAt.split('T')[0];
     if (evtDate >= weekStart.value && evtDate <= weekEnd) {
       const cal = calendarsStore.calendars.find(c => c.id === evt.calendarId);
@@ -198,7 +191,6 @@ const allDayEvents = computed(() => {
   return items;
 });
 
-// Positioned timed event blocks
 interface EventBlock {
   id: string;
   title: string;
@@ -217,17 +209,16 @@ const eventBlocks = computed<EventBlock[]>(() => {
 
   for (const evt of eventsStore.events) {
     if (evt.allDay) continue;
+    if (props.selectedGroupId && evt.calendarId !== props.selectedGroupId) continue;
     const evtDate = evt.startAt.split('T')[0];
     if (evtDate < weekStart.value || evtDate > weekEnd) continue;
 
-    // Find which column (day index)
     const dayIndex = weekDays.value.findIndex(d => d.dateStr === evtDate);
     if (dayIndex < 0) continue;
 
     const cal = calendarsStore.calendars.find(c => c.id === evt.calendarId);
     const color = cal?.color || '#4f46e5';
 
-    // Parse start and end times from ISO string
     const startTimePart = evt.startAt.split('T')[1] || '09:00:00';
     const endTimePart = evt.endAt.split('T')[1] || '10:00:00';
     const startParts = startTimePart.substring(0, 5).split(':');
@@ -269,10 +260,9 @@ function nextWeek() {
 }
 
 onMounted(() => {
-  // Scroll to ~8am
   nextTick(() => {
     if (gridContainer.value) {
-      gridContainer.value.scrollTop = HOUR_HEIGHT; // 1 hour from top (8am)
+      gridContainer.value.scrollTop = HOUR_HEIGHT;
     }
   });
 });
@@ -284,39 +274,48 @@ onMounted(() => {
   flex-direction: column;
   flex: 1;
   overflow: hidden;
+  background: var(--color-bg);
 }
 
 .week-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 12px 16px 8px;
 }
 
 .nav-btn {
   background: none;
   border: none;
-  padding: 6px;
+  padding: 8px;
   cursor: pointer;
-  color: var(--color-text);
-  border-radius: var(--radius);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .nav-btn:hover {
-  background: var(--color-bg-secondary);
+  opacity: 0.7;
+}
+
+.nav-btn:active {
+  opacity: 0.5;
 }
 
 .week-label {
-  font-size: 14px;
+  font-family: var(--font-display);
+  font-size: 15px;
   font-weight: 600;
+  color: var(--color-text);
 }
 
 .week-day-headers {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0.5px solid var(--color-border);
+  background: var(--color-bg);
 }
 
 .time-gutter-header {
@@ -327,8 +326,14 @@ onMounted(() => {
 .week-day-header {
   flex: 1;
   text-align: center;
-  padding: 4px 0 8px;
+  padding: 6px 0 10px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease;
+}
+
+.week-day-header:hover {
+  background: var(--color-bg-secondary);
 }
 
 .week-day-header .day-name {
@@ -339,58 +344,66 @@ onMounted(() => {
 }
 
 .week-day-header .day-num {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 17px;
   font-weight: 600;
   margin-top: 2px;
+  color: var(--color-text);
 }
 
 .week-day-header.is-today .day-num {
   background: var(--color-primary);
   color: white;
-  border-radius: 50%;
-  width: 30px;
-  height: 30px;
+  border-radius: var(--radius-full);
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .week-day-header.is-selected {
-  background: rgba(79, 70, 229, 0.05);
+  background: var(--color-primary-ghost);
 }
 
 .all-day-row {
   display: flex;
-  border-bottom: 1px solid var(--color-border);
-  padding: 4px 0;
+  border-bottom: 0.5px solid var(--color-border);
+  padding: 6px 0;
+  background: var(--color-bg);
 }
 
 .all-day-label {
   font-size: 10px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-weight: 500;
 }
 
 .all-day-events {
   flex: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 2px 4px;
+  gap: 4px;
+  padding: 2px 6px;
 }
 
 .all-day-event {
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius);
   color: white;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 120px;
+  max-width: 140px;
+}
+
+.all-day-event:hover {
+  opacity: 0.85;
 }
 
 .time-grid-container {
@@ -401,24 +414,25 @@ onMounted(() => {
 
 .time-grid {
   position: relative;
-  min-height: calc(16 * 60px); /* 16 hours * 60px */
+  min-height: calc(16 * 60px);
 }
 
 .time-row {
   display: flex;
   height: 60px;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0.5px solid var(--color-border-subtle);
 }
 
 .time-gutter {
   width: 50px;
   flex-shrink: 0;
-  font-size: 11px;
-  color: var(--color-text-secondary);
+  font-size: 12px;
+  color: var(--color-text-tertiary);
   text-align: right;
   padding-right: 8px;
   padding-top: 0;
   transform: translateY(-7px);
+  font-weight: 500;
 }
 
 .time-cells {
@@ -428,14 +442,13 @@ onMounted(() => {
 
 .time-cell {
   flex: 1;
-  border-left: 1px solid var(--color-border);
+  border-left: 0.5px solid var(--color-border-subtle);
 }
 
 .time-cell.is-today {
-  background: rgba(79, 70, 229, 0.03);
+  background: var(--color-primary-ghost);
 }
 
-/* Event overlay sits on top of the grid, offset by the gutter width */
 .events-overlay {
   position: absolute;
   top: 0;
@@ -447,14 +460,24 @@ onMounted(() => {
 
 .event-block {
   position: absolute;
-  border-radius: 4px;
-  padding: 4px 6px;
+  border-radius: var(--radius);
+  padding: 4px 8px;
   color: white;
   overflow: hidden;
   cursor: pointer;
   z-index: 5;
-  opacity: 0.9;
   pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+  border-left: 3px solid rgba(255, 255, 255, 0.3);
+  transition: opacity 0.15s ease;
+}
+
+.event-block:hover {
+  opacity: 0.9;
+}
+
+.event-block:active {
+  opacity: 0.8;
 }
 
 .event-block-title {
@@ -468,5 +491,6 @@ onMounted(() => {
 .event-block-time {
   font-size: 10px;
   opacity: 0.85;
+  font-weight: 500;
 }
 </style>
