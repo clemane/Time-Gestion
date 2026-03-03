@@ -27,6 +27,11 @@
     <!-- Title -->
     <input class="note-title-input" v-model="title" @input="debouncedSave" placeholder="Titre" :style="categoryTextColor ? { color: categoryTextColor, backgroundColor: categoryStyle?.backgroundColor } : {}" />
 
+    <!-- Tags -->
+    <div class="tags-section">
+      <TagsInput :modelValue="noteTags" @update:modelValue="onTagsChange" />
+    </div>
+
     <!-- Quick actions bar (date + category) -->
     <div class="quick-actions">
       <button class="quick-action-chip" @click="pickDate">
@@ -117,6 +122,7 @@ import { useCategoriesStore } from '@/stores/categories';
 import { useCalendarsStore } from '@/stores/calendars';
 import NoteEditor from '@/components/editor/NoteEditor.vue';
 import ShareDialog from '@/components/sharing/ShareDialog.vue';
+import TagsInput from '@/components/menu/TagsInput.vue';
 import { ChevronLeft, Pin, PinOff, MoreVertical, Link2, Trash2, CalendarDays, Tag, Users } from 'lucide-vue-next';
 import type { CategoryStyle } from '@time-gestion/shared';
 
@@ -166,6 +172,13 @@ const categoryTextColor = computed(() => {
   if (!categoryStyle.value?.backgroundColor) return undefined;
   return isLightColor(categoryStyle.value.backgroundColor) ? '#111827' : '#f9fafb';
 });
+
+const noteTags = computed(() => note.value?.tags || []);
+
+async function onTagsChange(tags: string[]) {
+  if (!note.value) return;
+  await notesStore.update(noteId.value, { tags });
+}
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -400,6 +413,11 @@ onMounted(async () => {
 .note-title-input::placeholder {
   color: var(--color-text-tertiary);
   font-weight: 400;
+}
+
+/* ── Tags section ── */
+.tags-section {
+  padding: 4px 16px 0;
 }
 
 /* ── Quick actions bar: simple text buttons in iOS blue ── */

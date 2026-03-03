@@ -14,12 +14,24 @@ export const useNotesStore = defineStore('notes', () => {
   async function create(dto: CreateNoteDto): Promise<Note> {
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+
+    // If a category is set and no content provided, use the category's defaultContent
+    let content = dto.content || {};
+    if (dto.categoryId && !dto.content) {
+      const cat = await db.categories.get(dto.categoryId);
+      if (cat?.defaultContent) {
+        content = cat.defaultContent as Record<string, unknown>;
+      }
+    }
+
     const note: Note = {
       id,
       userId: '',
       title: dto.title,
-      content: dto.content || {},
+      content,
+      tags: dto.tags || [],
       folderId: dto.folderId || null,
+      calendarId: dto.calendarId || null,
       categoryId: dto.categoryId || null,
       isPinned: dto.isPinned || false,
       scheduledDate: dto.scheduledDate || null,

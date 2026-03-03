@@ -5,10 +5,14 @@ let reminderInterval: ReturnType<typeof setInterval> | null = null;
 const notifiedEvents = new Set<string>();
 
 export function useReminders() {
-  async function requestPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-      await Notification.requestPermission();
+  async function requestPermission(): Promise<boolean> {
+    if (!('Notification' in window)) return false;
+    if (Notification.permission === 'granted') return true;
+    if (Notification.permission === 'default') {
+      const result = await Notification.requestPermission();
+      return result === 'granted';
     }
+    return false;
   }
 
   async function checkReminders() {
@@ -44,7 +48,20 @@ export function useReminders() {
 
   function startReminders() {
     checkReminders();
-    reminderInterval = setInterval(checkReminders, 60_000);
+    reminderInterval = setInterval(checkReminders, 30_000);
+
+    // Reset notifiedEvents at midnight, then every 24h
+    const now = new Date();
+    const midnight = new Date(now);
+    midnight.setHours(24, 0, 0, 0);
+    const msUntilMidnight = midnight.getTime() - now.getTime();
+
+    setTimeout(() => {
+      notifiedEvents.clear();
+      setInterval(() => {
+        notifiedEvents.clear();
+      }, 24 * 60 * 60 * 1000);
+    }, msUntilMidnight);
   }
 
   function stopReminders() {

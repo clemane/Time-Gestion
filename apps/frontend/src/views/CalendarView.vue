@@ -21,12 +21,24 @@
 
     <header class="cal-header">
       <h1>Calendrier</h1>
-      <div class="view-tabs">
-        <button :class="{ active: currentView === 'month' }" @click="currentView = 'month'">Mois</button>
-        <button :class="{ active: currentView === 'week' }" @click="currentView = 'week'">Semaine</button>
-        <button :class="{ active: currentView === 'agenda' }" @click="currentView = 'agenda'">Agenda</button>
+      <div class="header-right">
+        <button class="btn-icon" @click="showSearch = !showSearch">
+          <Search :size="22" />
+        </button>
+        <div class="view-tabs">
+          <button :class="{ active: currentView === 'month' }" @click="currentView = 'month'">Mois</button>
+          <button :class="{ active: currentView === 'week' }" @click="currentView = 'week'">Semaine</button>
+          <button :class="{ active: currentView === 'agenda' }" @click="currentView = 'agenda'">Agenda</button>
+        </div>
       </div>
     </header>
+
+    <!-- Search -->
+    <Transition name="search-slide">
+      <div class="search-bar" v-if="showSearch">
+        <input v-model="searchQuery" type="search" placeholder="Rechercher dans les evenements..." />
+      </div>
+    </Transition>
 
     <!-- Group filter chips -->
     <div class="group-chips" v-if="calendarsStore.calendars.length > 0">
@@ -67,7 +79,7 @@
     </div>
 
     <!-- FAB to create event -->
-    <button class="fab" :class="{ 'fab-open': showEventForm }" @click="showEventForm = true">
+    <button class="fab" :class="{ 'fab-open': showEventForm }" @click="haptic.light(); showEventForm = true">
       <Plus :size="24" />
     </button>
 
@@ -83,12 +95,13 @@ import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useNotesStore } from '@/stores/notes';
 import { usePullToRefresh } from '@/composables/usePullToRefresh';
+import { useHaptic } from '@/composables/useHaptic';
 import { useSync } from '@/composables/useSync';
 import MonthView from '@/components/calendar/MonthView.vue';
 import WeekView from '@/components/calendar/WeekView.vue';
 import AgendaView from '@/components/calendar/AgendaView.vue';
 import EventForm from '@/components/calendar/EventForm.vue';
-import { Calendar as CalendarIcon, FileText, Plus } from 'lucide-vue-next';
+import { Calendar as CalendarIcon, FileText, Plus, Search } from 'lucide-vue-next';
 import type { CalendarEvent } from '@time-gestion/shared';
 
 const router = useRouter();
@@ -96,6 +109,7 @@ const eventsStore = useEventsStore();
 const calendarsStore = useCalendarsStore();
 const notesStore = useNotesStore();
 const { sync } = useSync();
+const haptic = useHaptic();
 
 const ptr = usePullToRefresh(async () => {
   await sync();
@@ -107,6 +121,8 @@ const ptr = usePullToRefresh(async () => {
 const currentView = ref<'month' | 'week' | 'agenda'>('month');
 const selectedDate = ref(new Date().toISOString().split('T')[0]);
 const selectedGroupId = ref<string | null>(null);
+const showSearch = ref(false);
+const searchQuery = ref('');
 const showEventForm = ref(false);
 const editingEvent = ref<CalendarEvent | null>(null);
 
@@ -134,7 +150,14 @@ const selectedDayItems = computed(() => {
     }
   }
 
-  return items.sort((a, b) => a.time.localeCompare(b.time));
+  const sorted = items.sort((a, b) => a.time.localeCompare(b.time));
+
+  if (searchQuery.value) {
+    const q = searchQuery.value.toLowerCase();
+    return sorted.filter(item => item.title.toLowerCase().includes(q));
+  }
+
+  return sorted;
 });
 
 function editEvent(id: string) {
@@ -234,6 +257,83 @@ onMounted(async () => {
   letter-spacing: 0;
   color: var(--color-text);
   line-height: 1.1;
+}
+
+/* ── Header right group ── */
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: var(--color-primary);
+  cursor: pointer;
+  padding: 10px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-icon:active {
+  background: var(--color-bg-secondary);
+}
+
+/* ── Search bar ── */
+
+.search-bar {
+  padding: 0 20px 12px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: var(--radius);
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+  font-size: 17px;
+  font-family: var(--font-body);
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.search-bar input:focus {
+  outline: none;
+  background: var(--color-bg-elevated);
+  box-shadow: 0 0 0 2px var(--color-primary-ghost);
+}
+
+.search-bar input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Search slide transition */
+.search-slide-enter-active,
+.search-slide-leave-active {
+  transition: all 0.2s ease;
+  overflow: hidden;
+}
+
+.search-slide-enter-from,
+.search-slide-leave-to {
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.search-slide-enter-to,
+.search-slide-leave-from {
+  opacity: 1;
+  max-height: 60px;
 }
 
 /* ── View tabs (iOS Segmented Control) ── */

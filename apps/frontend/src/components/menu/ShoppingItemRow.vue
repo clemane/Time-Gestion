@@ -1,6 +1,6 @@
 <template>
   <div class="shopping-row" :class="{ checked: item.isChecked }">
-    <button class="check-btn" @click="$emit('toggle')">
+    <button class="check-btn" @click="haptic.light(); $emit('toggle')">
       <div class="checkbox" :class="{ active: item.isChecked }">
         <Check v-if="item.isChecked" :size="14" />
       </div>
@@ -19,7 +19,10 @@
 
 <script setup lang="ts">
 import { Check, X } from 'lucide-vue-next';
+import { useHaptic } from '@/composables/useHaptic';
 import type { ShoppingItem } from '@time-gestion/shared';
+
+const haptic = useHaptic();
 
 defineProps<{ item: ShoppingItem }>();
 defineEmits<{ toggle: []; remove: [] }>();

@@ -4,6 +4,10 @@
       <WifiOff :size="14" />
       <span>Mode hors-ligne</span>
     </div>
+    <div class="sync-bar" v-if="pendingCount > 0">
+      <RefreshCw :size="13" class="sync-icon" />
+      <span>{{ pendingCount }} modification{{ pendingCount > 1 ? 's' : '' }} en attente</span>
+    </div>
 
     <!-- Desktop sidebar (hidden on mobile) -->
     <aside class="desktop-sidebar">
@@ -39,14 +43,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onUnmounted } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import BottomNav from './BottomNav.vue';
 import TotoroMascot from '@/components/ui/TotoroMascot.vue';
 import InstallBanner from '@/components/ui/InstallBanner.vue';
 import { isOnline } from '@/sync/online';
 import { useTheme } from '@/composables/useTheme';
-import { FileText, Calendar, UtensilsCrossed, Settings, WifiOff } from 'lucide-vue-next';
+import { useSyncStatus } from '@/composables/useSyncStatus';
+import { Home, FileText, Calendar, UtensilsCrossed, Settings, WifiOff, RefreshCw } from 'lucide-vue-next';
 
 const { resolvedTheme } = useTheme();
 const isTotoro = computed(() => resolvedTheme.value === 'totoro');
@@ -54,11 +59,16 @@ const isTotoro = computed(() => resolvedTheme.value === 'totoro');
 const route = useRoute();
 
 const navItems = [
+  { to: '/dashboard', label: 'Accueil', icon: Home },
   { to: '/notes', label: 'Notes', icon: FileText },
   { to: '/calendar', label: 'Calendrier', icon: Calendar },
   { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
   { to: '/settings', label: 'Reglages', icon: Settings },
 ];
+
+const { pendingCount, startWatching, stopWatching } = useSyncStatus();
+startWatching();
+onUnmounted(() => stopWatching());
 
 function isActive(path: string): boolean {
   return route.path === path || route.path.startsWith(path + '/');
@@ -85,6 +95,29 @@ function isActive(path: string): boolean {
   align-items: center;
   justify-content: center;
   gap: 6px;
+}
+
+.sync-bar {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 4px 16px;
+  font-size: 12px;
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sync-icon {
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .desktop-sidebar {

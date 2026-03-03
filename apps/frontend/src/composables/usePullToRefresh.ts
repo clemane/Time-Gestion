@@ -1,6 +1,8 @@
 import { ref } from 'vue';
+import { useHaptic } from './useHaptic';
 
 export function usePullToRefresh(onRefresh: () => Promise<void>) {
+  const haptic = useHaptic();
   const pulling = ref(false);
   const pullDistance = ref(0);
   const refreshing = ref(false);
@@ -32,6 +34,7 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
     isPulling = false;
 
     if (pullDistance.value >= threshold) {
+      haptic.medium();
       refreshing.value = true;
       try {
         await onRefresh();

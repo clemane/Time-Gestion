@@ -23,10 +23,22 @@
         <textarea v-model="description" placeholder="Description courte..." class="form-textarea" rows="2"></textarea>
       </div>
 
-      <!-- Image URL -->
+      <!-- Image -->
       <div class="form-group">
-        <label class="form-label">URL de l'image</label>
-        <input v-model="imageUrl" placeholder="https://..." class="form-input" />
+        <label class="form-label">Photo</label>
+        <div class="image-section">
+          <div v-if="imageUrl" class="image-preview">
+            <img :src="imageUrl" alt="Photo de la recette" />
+            <button class="remove-image-btn" @click="imageUrl = ''" type="button">
+              <X :size="16" />
+            </button>
+          </div>
+          <label v-else class="image-upload-btn">
+            <Camera :size="20" />
+            <span>Ajouter une photo</span>
+            <input type="file" accept="image/*" capture="environment" @change="handleImageUpload" hidden />
+          </label>
+        </div>
       </div>
 
       <!-- Time & Servings -->
@@ -101,7 +113,7 @@ import { useRecipesStore } from '@/stores/recipes';
 import NoteEditor from '@/components/editor/NoteEditor.vue';
 import TagsInput from '@/components/menu/TagsInput.vue';
 import RecipeIngredientRow from '@/components/menu/RecipeIngredientRow.vue';
-import { ChevronLeft, Plus, Trash2 } from 'lucide-vue-next';
+import { ChevronLeft, Plus, Trash2, Camera, X } from 'lucide-vue-next';
 
 const route = useRoute();
 const router = useRouter();
@@ -119,6 +131,46 @@ const servings = ref<number | undefined>();
 const tags = ref<string[]>([]);
 const ingredients = ref<Array<{ name: string; quantity?: number; unit?: string; sortOrder?: number }>>([]);
 const instructions = ref<Record<string, unknown>>({});
+
+async function handleImageUpload(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file) return;
+
+  const base64 = await resizeImage(file, 800, 0.8);
+  imageUrl.value = base64;
+}
+
+function resizeImage(file: File, maxSize: number, quality: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize;
+            width = maxSize;
+          } else {
+            width = (width / height) * maxSize;
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.onerror = reject;
+      img.src = e.target!.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
 
 async function save() {
   if (!title.value.trim()) return;
@@ -380,5 +432,70 @@ onMounted(async () => {
 
 .delete-btn:active {
   opacity: 0.7;
+}
+
+.image-section {
+  width: 100%;
+}
+
+.image-preview {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  max-height: 200px;
+}
+
+.image-preview img {
+  width: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 150ms ease;
+}
+
+.remove-image-btn:active {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.image-upload-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1.5px dashed var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-primary);
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  width: 100%;
+  box-sizing: border-box;
+  transition: background 150ms ease, border-color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.image-upload-btn:active {
+  background: var(--color-bg-secondary);
+  border-color: var(--color-primary);
 }
 </style>

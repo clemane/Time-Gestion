@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import { db } from '@/db/schema';
+import { getDefaultCategories } from '@/db/default-categories';
 import type { Category, CreateCategoryDto, UpdateCategoryDto } from '@time-gestion/shared';
 
 export const useCategoriesStore = defineStore('categories', () => {
@@ -76,5 +77,22 @@ export const useCategoriesStore = defineStore('categories', () => {
     categories.value = categories.value.filter(c => c.id !== id);
   }
 
-  return { categories, loading, loadFromLocal, create, update, remove };
+  async function seedDefaults() {
+    const existing = await db.categories.count();
+    if (existing > 0) return;
+
+    const defaults = getDefaultCategories();
+    const now = new Date().toISOString();
+    const cats: Category[] = defaults.map((d) => ({
+      ...d,
+      id: crypto.randomUUID(),
+      userId: '',
+      updatedAt: now,
+    } as Category));
+
+    await db.categories.bulkPut(cats);
+    categories.value = cats;
+  }
+
+  return { categories, loading, loadFromLocal, create, update, remove, seedDefaults };
 });

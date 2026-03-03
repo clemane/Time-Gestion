@@ -8,7 +8,7 @@ export async function pushPendingChanges() {
 
   const operations = pending.map(op => ({
     id: String(op.id),
-    entity: op.entity as 'note' | 'folder' | 'category' | 'calendar' | 'event' | 'share',
+    entity: op.entity as 'note' | 'folder' | 'category' | 'calendar' | 'event' | 'share' | 'recipe' | 'recipeIngredient' | 'mealSlot' | 'shoppingItem',
     entityId: op.entityId,
     action: op.action as 'CREATE' | 'UPDATE' | 'DELETE',
     payload: op.payload,

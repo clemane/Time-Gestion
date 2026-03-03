@@ -4,6 +4,7 @@ import { pushPendingChanges, pullRemoteChanges } from '@/sync/engine';
 
 export function useSync() {
   let syncInterval: ReturnType<typeof setInterval> | null = null;
+  let currentRate = 30_000;
 
   async function sync() {
     if (!isOnline.value) return;
@@ -17,7 +18,7 @@ export function useSync() {
 
   function startSync() {
     sync();
-    syncInterval = setInterval(sync, 30_000);
+    syncInterval = setInterval(sync, currentRate);
   }
 
   function stopSync() {
@@ -27,9 +28,17 @@ export function useSync() {
     }
   }
 
+  function setSyncRate(ms: number) {
+    currentRate = ms;
+    if (syncInterval) {
+      stopSync();
+      startSync();
+    }
+  }
+
   watch(isOnline, (online) => {
     if (online) sync();
   });
 
-  return { sync, startSync, stopSync, isOnline };
+  return { sync, startSync, stopSync, setSyncRate, isOnline };
 }

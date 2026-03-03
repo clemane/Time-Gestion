@@ -15,11 +15,12 @@
 
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router';
-import { FileText, Calendar, UtensilsCrossed, Settings } from 'lucide-vue-next';
+import { Home, FileText, Calendar, UtensilsCrossed, Settings } from 'lucide-vue-next';
 
 const route = useRoute();
 
 const navItems = [
+  { to: '/dashboard', label: 'Accueil', icon: Home },
   { to: '/notes', label: 'Notes', icon: FileText },
   { to: '/calendar', label: 'Calendrier', icon: Calendar },
   { to: '/menu', label: 'Menu', icon: UtensilsCrossed },
@@ -55,7 +56,7 @@ function isActive(path: string): boolean {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  padding: 8px 16px;
+  padding: 8px 12px;
   color: var(--color-text-tertiary);
   text-decoration: none;
   font-size: 10px;

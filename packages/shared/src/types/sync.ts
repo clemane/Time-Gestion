@@ -1,5 +1,5 @@
 export type SyncAction = 'CREATE' | 'UPDATE' | 'DELETE';
-export type SyncEntity = 'note' | 'folder' | 'category' | 'calendar' | 'event' | 'share';
+export type SyncEntity = 'note' | 'folder' | 'category' | 'calendar' | 'event' | 'share' | 'recipe' | 'recipeIngredient' | 'mealSlot' | 'shoppingItem';
 
 export interface SyncOperation {
   id: string;

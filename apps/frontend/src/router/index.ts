@@ -19,7 +19,12 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/notes',
+      redirect: '/dashboard',
+    },
+    {
+      path: '/dashboard',
+      name: 'dashboard',
+      component: () => import('@/views/DashboardView.vue'),
     },
     {
       path: '/notes',

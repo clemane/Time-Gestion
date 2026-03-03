@@ -60,8 +60,32 @@ export const useCalendarsStore = defineStore('calendars', () => {
       payload: {},
       timestamp: now,
     });
+    // Orphan notes: set calendarId to null
+    await db.notes.where('calendarId').equals(id).modify({ calendarId: null });
     calendars.value = calendars.value.filter(c => c.id !== id);
   }
 
-  return { calendars, loading, loadFromLocal, create, update, remove };
+  async function seedDefaults() {
+    const existing = await db.calendars.count();
+    if (existing > 0) return;
+
+    const now = new Date().toISOString();
+    const defaults = [
+      { name: 'Personnel', color: '#059669' },
+      { name: 'Travail', color: '#4f46e5' },
+    ];
+    const cals: Calendar[] = defaults.map((d) => ({
+      id: crypto.randomUUID(),
+      userId: '',
+      name: d.name,
+      color: d.color,
+      updatedAt: now,
+      deletedAt: null,
+    }));
+
+    await db.calendars.bulkPut(cals);
+    calendars.value = cals;
+  }
+
+  return { calendars, loading, loadFromLocal, create, update, remove, seedDefaults };
 });

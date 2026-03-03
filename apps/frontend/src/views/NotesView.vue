@@ -57,6 +57,24 @@
       </button>
     </div>
 
+    <!-- Tag filter chips -->
+    <div class="tag-chips" v-if="allNoteTags.length > 0">
+      <button
+        class="tag-chip"
+        :class="{ active: activeTag === null }"
+        @click="activeTag = null"
+      >Tous</button>
+      <button
+        v-for="tag in allNoteTags"
+        :key="tag"
+        class="tag-chip"
+        :class="{ active: activeTag === tag }"
+        @click="activeTag = tag"
+      >
+        #{{ tag }}
+      </button>
+    </div>
+
     <!-- Folder filter sidebar (slide-over) -->
     <Transition name="drawer">
       <div class="folder-overlay" v-if="showFolders" @click="showFolders = false">
@@ -82,25 +100,41 @@
         <div v-if="pinnedNotes.length" class="notes-section">
           <h3 class="section-title">Epinglees</h3>
           <TransitionGroup name="list-stagger" appear>
-            <NoteCard
+            <SwipeAction
               v-for="(note, index) in pinnedNotes"
               :key="note.id"
-              :note="note"
               :style="{ '--stagger-delay': `${index * 50}ms` }"
-              @click="openNote(note.id)"
-            />
+            >
+              <NoteCard
+                :note="note"
+                @click="openNote(note.id)"
+              />
+              <template #right>
+                <button class="swipe-action__action-btn swipe-action__action-btn--danger" @click="deleteNote(note.id)">
+                  Supprimer
+                </button>
+              </template>
+            </SwipeAction>
           </TransitionGroup>
         </div>
         <div class="notes-section">
           <h3 v-if="pinnedNotes.length" class="section-title">Autres</h3>
           <TransitionGroup name="list-stagger" appear>
-            <NoteCard
+            <SwipeAction
               v-for="(note, index) in otherNotes"
               :key="note.id"
-              :note="note"
               :style="{ '--stagger-delay': `${(pinnedNotes.length + index) * 50}ms` }"
-              @click="openNote(note.id)"
-            />
+            >
+              <NoteCard
+                :note="note"
+                @click="openNote(note.id)"
+              />
+              <template #right>
+                <button class="swipe-action__action-btn swipe-action__action-btn--danger" @click="deleteNote(note.id)">
+                  Supprimer
+                </button>
+              </template>
+            </SwipeAction>
           </TransitionGroup>
         </div>
         <EmptyState
@@ -155,10 +189,12 @@ import { useFoldersStore } from '@/stores/folders';
 import { useCategoriesStore } from '@/stores/categories';
 import { useCalendarsStore } from '@/stores/calendars';
 import { usePullToRefresh } from '@/composables/usePullToRefresh';
+import { useHaptic } from '@/composables/useHaptic';
 import { useSync } from '@/composables/useSync';
 import NoteCard from '@/components/notes/NoteCard.vue';
 import SkeletonCard from '@/components/ui/SkeletonCard.vue';
 import EmptyState from '@/components/ui/EmptyState.vue';
+import SwipeAction from '@/components/ui/SwipeAction.vue';
 import { FolderOpen, Plus, FileText, Search } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -167,6 +203,7 @@ const foldersStore = useFoldersStore();
 const categoriesStore = useCategoriesStore();
 const calendarsStore = useCalendarsStore();
 const { sync } = useSync();
+const haptic = useHaptic();
 
 const ptr = usePullToRefresh(async () => {
   await sync();
@@ -178,6 +215,7 @@ const searchQuery = ref('');
 const showSearch = ref(false);
 const selectedFolderId = ref<string | null>(null);
 const selectedGroupId = ref<string | null>(null);
+const activeTag = ref<string | null>(null);
 const showFolders = ref(false);
 const showNewNoteSheet = ref(false);
 const loading = ref(true);
@@ -185,6 +223,30 @@ const loading = ref(true);
 const categories = computed(() => categoriesStore.categories);
 
 const folders = computed(() => foldersStore.folders);
+
+const allNoteTags = computed(() => {
+  const tagSet = new Set<string>();
+  for (const note of notesStore.notes) {
+    if (note.tags) {
+      for (const tag of note.tags) {
+        tagSet.add(tag);
+      }
+    }
+  }
+  return Array.from(tagSet).sort();
+});
+
+function extractText(node: any): string {
+  if (!node) return '';
+  const texts: string[] = [];
+  if (typeof node.text === 'string') texts.push(node.text);
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      texts.push(extractText(child));
+    }
+  }
+  return texts.join(' ');
+}
 
 const filteredNotes = computed(() => {
   let result = notesStore.notes;
@@ -194,9 +256,20 @@ const filteredNotes = computed(() => {
   if (selectedGroupId.value) {
     result = result.filter(n => n.calendarId === selectedGroupId.value);
   }
+  if (activeTag.value) {
+    result = result.filter(n => n.tags && n.tags.includes(activeTag.value!));
+  }
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter(n => n.title.toLowerCase().includes(q));
+    result = result.filter(n => {
+      if (n.title.toLowerCase().includes(q)) return true;
+      try {
+        const contentText = extractText(n.content).toLowerCase();
+        return contentText.includes(q);
+      } catch {
+        return false;
+      }
+    });
   }
   return result.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 });
@@ -218,6 +291,7 @@ function chipTextStyle(bgColor?: string) {
 }
 
 async function createNote() {
+  haptic.light();
   const note = await notesStore.create({
     title: '',
     calendarId: selectedGroupId.value || undefined,
@@ -237,6 +311,11 @@ async function createNoteWithCategory(categoryId: string | null, defaultTitle: s
 
 function openNote(id: string) {
   router.push(`/notes/${id}`);
+}
+
+async function deleteNote(id: string) {
+  await notesStore.remove(id);
+  haptic.success();
 }
 
 onMounted(async () => {
@@ -432,6 +511,50 @@ onMounted(async () => {
 
 .group-chip.active .group-chip-dot {
   box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5);
+}
+
+/* Tag filter chips */
+.tag-chips {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 14px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.tag-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: var(--font-body);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 32px;
+  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tag-chip:active {
+  background: var(--color-border);
+}
+
+.tag-chip.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }
 
 /* Folder drawer overlay */

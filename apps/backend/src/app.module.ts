@@ -9,6 +9,9 @@ import { CalendarsModule } from './calendars/calendars.module';
 import { EventsModule } from './events/events.module';
 import { SharingModule } from './sharing/sharing.module';
 import { SyncModule } from './sync/sync.module';
+import { RecipesModule } from './recipes/recipes.module';
+import { MealPlansModule } from './meal-plans/meal-plans.module';
+import { ShoppingModule } from './shopping/shopping.module';
 
 @Module({
   imports: [
@@ -25,6 +28,9 @@ import { SyncModule } from './sync/sync.module';
     EventsModule,
     SharingModule,
     SyncModule,
+    RecipesModule,
+    MealPlansModule,
+    ShoppingModule,
   ],
 })
 export class AppModule {}

@@ -3,6 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { CategoriesService } from '../categories/categories.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -12,6 +13,7 @@ export class AuthService {
     private prisma: PrismaService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private categoriesService: CategoriesService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -28,6 +30,9 @@ export class AuthService {
         displayName: dto.displayName,
       },
     });
+
+    // Seed default categories for new user
+    await this.categoriesService.seedDefaults(user.id);
 
     const tokens = await this.generateTokens(user.id, user.email);
     return {

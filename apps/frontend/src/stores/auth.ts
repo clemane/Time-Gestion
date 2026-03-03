@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { User } from '@time-gestion/shared';
 import { apiFetch, setAccessToken } from '@/api/client';
+import { useCategoriesStore } from '@/stores/categories';
+import { useCalendarsStore } from '@/stores/calendars';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -14,6 +16,12 @@ export const useAuthStore = defineStore('auth', () => {
     });
     setAccessToken(data.accessToken);
     user.value = data.user;
+
+    // Seed default categories and groups locally for offline access
+    const categoriesStore = useCategoriesStore();
+    await categoriesStore.seedDefaults();
+    const calendarsStore = useCalendarsStore();
+    await calendarsStore.seedDefaults();
   }
 
   async function login(email: string, password: string) {

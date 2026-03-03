@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { CategoriesService } from '../categories/categories.service';
 import * as bcrypt from 'bcrypt';
 
 jest.mock('bcrypt');
@@ -34,6 +35,10 @@ describe('AuthService', () => {
     }),
   };
 
+  const mockCategoriesService = {
+    seedDefaults: jest.fn().mockResolvedValue(undefined),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -41,6 +46,7 @@ describe('AuthService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: CategoriesService, useValue: mockCategoriesService },
       ],
     }).compile();
 

@@ -22,6 +22,9 @@ model User {
   events     CalendarEvent[]
   ownedShares    Share[] @relation("ShareOwner")
   receivedShares Share[] @relation("ShareReceiver")
+  recipes       Recipe[]
+  mealSlots     MealSlot[]
+  shoppingItems ShoppingItem[]
 
   @@map("users")
 }
@@ -68,6 +71,7 @@ model Note {
   categoryId    String?   @map("category_id") @db.Uuid
   title         String
   content       Json      @default("{}")
+  tags          String[]  @default([])
   isPinned      Boolean   @default(false) @map("is_pinned")
   scheduledDate DateTime? @map("scheduled_date") @db.Date
   scheduledTime String?   @map("scheduled_time") @db.VarChar(5)
@@ -134,4 +138,76 @@ model Share {
 
   @@unique([resourceType, resourceId, sharedWithId])
   @@map("shares")
+}
+
+model Recipe {
+  id           String    @id @default(uuid()) @db.Uuid
+  userId       String    @map("user_id") @db.Uuid
+  title        String
+  description  String?
+  instructions Json      @default("{}")
+  prepTime     Int?      @map("prep_time")
+  cookTime     Int?      @map("cook_time")
+  servings     Int?
+  imageUrl     String?   @map("image_url")
+  tags         String[]  @default([])
+  isFavorite   Boolean   @default(false) @map("is_favorite")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+  deletedAt    DateTime? @map("deleted_at")
+
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients RecipeIngredient[]
+  mealSlots   MealSlot[]
+  shoppingItems ShoppingItem[]
+
+  @@map("recipes")
+}
+
+model RecipeIngredient {
+  id        String  @id @default(uuid()) @db.Uuid
+  recipeId  String  @map("recipe_id") @db.Uuid
+  name      String
+  quantity  Float?
+  unit      String?
+  sortOrder Int     @default(0) @map("sort_order")
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@map("recipe_ingredients")
+}
+
+model MealSlot {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @map("user_id") @db.Uuid
+  recipeId    String?   @map("recipe_id") @db.Uuid
+  date        DateTime  @db.Date
+  slotName    String    @map("slot_name")
+  customTitle String?   @map("custom_title")
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipe Recipe? @relation(fields: [recipeId], references: [id])
+
+  @@map("meal_slots")
+}
+
+model ShoppingItem {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  name           String
+  quantity       Float?
+  unit           String?
+  isChecked      Boolean  @default(false) @map("is_checked")
+  sourceRecipeId String?  @map("source_recipe_id") @db.Uuid
+  weekStart      DateTime @map("week_start") @db.Date
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceRecipe Recipe? @relation(fields: [sourceRecipeId], references: [id])
+
+  @@map("shopping_items")
 }

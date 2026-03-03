@@ -50,9 +50,39 @@
     })();
   </script>
   <title>Time Gestion</title>
+  <style>
+    .splash {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      background: var(--color-bg, #FAF8F5);
+    }
+    .splash-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 48px;
+      color: var(--color-primary, #7C9A82);
+      animation: splash-pulse 2s ease-in-out infinite;
+    }
+    @keyframes splash-pulse {
+      0%   { transform: scale(1);    opacity: 0.8; }
+      50%  { transform: scale(1.05); opacity: 1;   }
+      100% { transform: scale(1);    opacity: 0.8; }
+    }
+    .splash-fade-out {
+      opacity: 0;
+      transition: opacity 400ms ease;
+    }
+  </style>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">
+    <div id="splash" class="splash">
+      <span class="splash-logo">TG</span>
+    </div>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

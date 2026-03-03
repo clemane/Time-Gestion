@@ -6,3 +6,6 @@ export * from './types/calendar';
 export * from './types/event';
 export * from './types/share';
 export * from './types/sync';
+export * from './types/recipe';
+export * from './types/meal-plan';
+export * from './types/shopping';

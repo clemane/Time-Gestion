@@ -10,8 +10,8 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { RouterView } from 'vue-router';
+import { onMounted, ref } from 'vue';
+import { RouterView, useRouter } from 'vue-router';
 import type { RouteLocationNormalizedLoaded } from 'vue-router';
 import AppShell from '@/components/layout/AppShell.vue';
 import { useAuthStore } from '@/stores/auth';
@@ -24,28 +24,55 @@ const { startSync } = useSync();
 const { requestPermission, startReminders } = useReminders();
 useTheme();
 
+const router = useRouter();
+const prevPath = ref(router.currentRoute.value.path);
+
 const navOrder: Record<string, number> = {
-  '/notes': 0,
-  '/calendar': 1,
-  '/menu': 2,
-  '/settings': 3,
+  '/dashboard': 0,
+  '/notes': 1,
+  '/calendar': 2,
+  '/menu': 3,
+  '/settings': 4,
 };
 
-let lastNavIndex = 0;
+function isDetailPage(path: string): boolean {
+  return Object.keys(navOrder).some(
+    (base) => path.startsWith(base + '/') && path !== base
+  );
+}
+
+function getNavBase(path: string): string | undefined {
+  return Object.keys(navOrder).find(
+    (base) => path === base || path.startsWith(base + '/')
+  );
+}
 
 function transitionName(route: RouteLocationNormalizedLoaded): string {
-  const path = route.path;
+  const toPath = route.path;
+  const fromPath = prevPath.value;
 
-  // Child/detail pages always slide left
-  if (path.startsWith('/notes/') || path.startsWith('/settings/') || path.startsWith('/menu/')) {
+  // Update prevPath for next transition
+  prevPath.value = toPath;
+
+  const toIsDetail = isDetailPage(toPath);
+  const fromIsDetail = isDetailPage(fromPath);
+
+  // Navigating TO a detail page → slide forward
+  if (toIsDetail && !fromIsDetail) {
     return 'slide-left';
   }
 
-  const currentIndex = navOrder[path];
-  if (currentIndex !== undefined) {
-    const direction = currentIndex >= lastNavIndex ? 'fade' : 'fade';
-    lastNavIndex = currentIndex;
-    return direction;
+  // Navigating FROM a detail page back to a main route → slide back
+  if (fromIsDetail && !toIsDetail) {
+    return 'slide-right';
+  }
+
+  // Both are main nav routes → compare order for direction
+  const toBase = getNavBase(toPath);
+  const fromBase = getNavBase(fromPath);
+  if (toBase !== undefined && fromBase !== undefined && navOrder[toBase] !== undefined && navOrder[fromBase] !== undefined) {
+    if (navOrder[toBase] > navOrder[fromBase]) return 'slide-left';
+    if (navOrder[toBase] < navOrder[fromBase]) return 'slide-right';
   }
 
   return 'fade';

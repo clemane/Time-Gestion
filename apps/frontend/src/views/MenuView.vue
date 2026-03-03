@@ -60,7 +60,7 @@
         <p class="empty-sub">Ajoutez votre premiere recette !</p>
       </div>
 
-      <button class="fab" @click="$router.push('/menu/recipes/new')">
+      <button class="fab" @click="haptic.light(); $router.push('/menu/recipes/new')">
         <Plus :size="24" />
       </button>
     </template>
@@ -112,16 +112,27 @@
         >
           <Trash2 :size="16" /> Supprimer coches
         </button>
+        <button class="action-btn outline" :disabled="syncing" @click="syncNow">
+          <RefreshCw :size="16" :class="{ 'spin-icon': syncing }" /> Synchroniser
+        </button>
       </div>
 
       <div v-if="shoppingStore.items.length > 0" class="shopping-list">
-        <ShoppingItemRow
+        <SwipeAction
           v-for="item in shoppingStore.items"
           :key="item.id"
-          :item="item"
-          @toggle="shoppingStore.toggleCheck(item.id)"
-          @remove="shoppingStore.removeItem(item.id)"
-        />
+        >
+          <ShoppingItemRow
+            :item="item"
+            @toggle="shoppingStore.toggleCheck(item.id)"
+            @remove="shoppingStore.removeItem(item.id)"
+          />
+          <template #right>
+            <button class="swipe-action__action-btn swipe-action__action-btn--danger" @click="deleteShoppingItem(item.id)">
+              Supprimer
+            </button>
+          </template>
+        </SwipeAction>
       </div>
       <div v-else class="empty-state">
         <ShoppingCart :size="48" class="empty-icon" />
@@ -145,17 +156,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRecipesStore } from '@/stores/recipes';
 import { useMealPlanStore } from '@/stores/mealPlan';
 import { useShoppingStore } from '@/stores/shopping';
 import { usePullToRefresh } from '@/composables/usePullToRefresh';
+import { useHaptic } from '@/composables/useHaptic';
 import { useSync } from '@/composables/useSync';
 import RecipeCard from '@/components/menu/RecipeCard.vue';
 import WeekNavigator from '@/components/menu/WeekNavigator.vue';
 import MealSlotCard from '@/components/menu/MealSlotCard.vue';
 import ShoppingItemRow from '@/components/menu/ShoppingItemRow.vue';
 import RecipePicker from '@/components/menu/RecipePicker.vue';
+import SwipeAction from '@/components/ui/SwipeAction.vue';
 import {
   UtensilsCrossed, Plus, Search as SearchIcon,
   RefreshCw, Trash2, ShoppingCart,
@@ -164,7 +177,8 @@ import {
 const recipesStore = useRecipesStore();
 const mealPlanStore = useMealPlanStore();
 const shoppingStore = useShoppingStore();
-const { sync } = useSync();
+const { sync, setSyncRate } = useSync();
+const haptic = useHaptic();
 
 const ptr = usePullToRefresh(async () => {
   await sync();
@@ -179,6 +193,21 @@ const selectedTag = ref<string | null>(null);
 const showPicker = ref(false);
 const pickerSlotId = ref<string | null>(null);
 const newItemName = ref('');
+const syncing = ref(false);
+
+watch(currentTab, (tab) => {
+  setSyncRate(tab === 'shopping' ? 10_000 : 30_000);
+});
+
+async function syncNow() {
+  syncing.value = true;
+  try {
+    await sync();
+    await shoppingStore.loadByWeek(mealPlanStore.currentWeekStart);
+  } finally {
+    syncing.value = false;
+  }
+}
 
 const allTags = computed(() => {
   const tags = new Set<string>();
@@ -256,6 +285,11 @@ async function addManualItem() {
   newItemName.value = '';
 }
 
+async function deleteShoppingItem(id: string) {
+  await shoppingStore.removeItem(id);
+  haptic.success();
+}
+
 onMounted(async () => {
   await recipesStore.loadFromLocal();
   await mealPlanStore.loadWeek();
@@ -322,7 +356,10 @@ onMounted(async () => {
 .action-btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px; border: none; border-radius: 10px; font-family: var(--font-body); font-size: 14px; font-weight: 500; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .action-btn.primary { background: var(--color-primary); color: white; border-radius: var(--radius); }
 .action-btn.danger { background: var(--color-danger-ghost); color: var(--color-danger); border-radius: var(--radius); }
+.action-btn.outline { background: var(--color-bg-elevated); color: var(--color-text-secondary); border: 1px solid var(--color-border); border-radius: var(--radius); }
+.action-btn.outline:disabled { opacity: 0.5; }
 .action-btn:active { opacity: 0.7; }
+.spin-icon { animation: spin 0.7s linear infinite; }
 
 .shopping-list { margin: 0 20px; border-radius: var(--radius-md, 12px); overflow: hidden; margin-bottom: 12px; }
 

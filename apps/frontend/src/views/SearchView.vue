@@ -5,10 +5,7 @@
     </header>
 
     <div class="search-input-wrap">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8"/>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
+      <Search :size="18" />
       <input v-model="query" type="search" placeholder="Rechercher notes et evenements..." autofocus @input="debouncedSearch" />
     </div>
 
@@ -16,42 +13,57 @@
       <!-- Notes results -->
       <div v-if="noteResults.length > 0" class="result-section">
         <h3>Notes ({{ noteResults.length }})</h3>
-        <div v-for="note in noteResults" :key="note.id" class="result-item" @click="$router.push(`/notes/${note.id}`)">
-          <span class="result-icon">&#x1f4dd;</span>
-          <div>
-            <div class="result-title">{{ note.title }}</div>
-            <div class="result-preview">{{ getPreview(note) }}</div>
+        <TransitionGroup name="list-stagger" appear>
+          <div v-for="(note, index) in noteResults" :key="note.id" class="result-item" :style="{ '--stagger-delay': `${index * 50}ms` }" @click="$router.push(`/notes/${note.id}`)">
+            <span class="result-icon"><FileText :size="16" /></span>
+            <div>
+              <div class="result-title">{{ note.title }}</div>
+              <div class="result-preview">{{ getPreview(note) }}</div>
+            </div>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
 
       <!-- Events results -->
       <div v-if="eventResults.length > 0" class="result-section">
         <h3>Evenements ({{ eventResults.length }})</h3>
-        <div v-for="evt in eventResults" :key="evt.id" class="result-item">
-          <span class="result-icon">&#x1f4c5;</span>
-          <div>
-            <div class="result-title">{{ evt.title }}</div>
-            <div class="result-preview">{{ formatEventDate(evt) }}</div>
+        <TransitionGroup name="list-stagger" appear>
+          <div v-for="(evt, index) in eventResults" :key="evt.id" class="result-item" :style="{ '--stagger-delay': `${index * 50}ms` }">
+            <span class="result-icon"><Calendar :size="16" /></span>
+            <div>
+              <div class="result-title">{{ evt.title }}</div>
+              <div class="result-preview">{{ formatEventDate(evt) }}</div>
+            </div>
           </div>
-        </div>
+        </TransitionGroup>
       </div>
 
-      <p v-if="noteResults.length === 0 && eventResults.length === 0" class="no-results">
-        Aucun resultat pour "{{ query }}"
-      </p>
+      <EmptyState
+        v-if="noteResults.length === 0 && eventResults.length === 0"
+        :icon="SearchX"
+        :title="`Aucun resultat pour &quot;${query}&quot;`"
+        description="Essayez avec d'autres termes de recherche"
+      />
     </div>
 
-    <div v-else class="empty-state">
-      <p>Recherchez dans vos notes et evenements</p>
-    </div>
+    <EmptyState
+      v-if="!query"
+      :icon="SearchIcon"
+      title="Recherchez dans vos notes et evenements"
+      description="Tapez un mot-cle pour commencer"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import { db } from '@/db/schema';
+import { Search as SearchIcon, FileText, Calendar, SearchX } from 'lucide-vue-next';
+import EmptyState from '@/components/ui/EmptyState.vue';
 import type { Note, CalendarEvent } from '@time-gestion/shared';
+
+// Alias for template usage
+const Search = SearchIcon;
 
 const query = ref('');
 const noteResults = ref<Note[]>([]);
@@ -72,11 +84,9 @@ async function search() {
     return;
   }
 
-  // Search notes in IndexedDB
   const allNotes = await db.notes.filter(n => !n.deletedAt).toArray();
   noteResults.value = allNotes.filter(n => {
     if (n.title.toLowerCase().includes(q)) return true;
-    // Search in content text
     try {
       const text = extractText(n.content as Record<string, unknown>);
       return text.toLowerCase().includes(q);
@@ -85,7 +95,6 @@ async function search() {
     }
   });
 
-  // Search events in IndexedDB
   const allEvents = await db.events.filter(e => !e.deletedAt).toArray();
   eventResults.value = allEvents.filter(e => {
     return e.title.toLowerCase().includes(q) ||
@@ -126,15 +135,19 @@ function formatEventDate(evt: CalendarEvent): string {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg);
 }
 
 .search-header {
-  padding: 16px;
+  padding: 20px 20px 12px;
 }
 
 .search-header h1 {
-  font-size: 28px;
+  font-family: var(--font-display);
+  font-size: 34px;
   font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
 }
 
 .search-input-wrap {
@@ -142,10 +155,16 @@ function formatEventDate(evt: CalendarEvent): string {
   align-items: center;
   gap: 8px;
   margin: 0 16px 16px;
-  padding: 10px 14px;
-  border: 1px solid var(--color-border);
+  padding: 10px 12px;
+  border: none;
   border-radius: var(--radius);
   background: var(--color-bg-secondary);
+  transition: none;
+}
+
+.search-input-wrap:focus-within {
+  border: none;
+  box-shadow: none;
 }
 
 .search-input-wrap input {
@@ -153,12 +172,17 @@ function formatEventDate(evt: CalendarEvent): string {
   border: none;
   background: none;
   color: var(--color-text);
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 17px;
   outline: none;
 }
 
+.search-input-wrap input::placeholder {
+  color: var(--color-text-tertiary);
+}
+
 .search-input-wrap svg {
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   flex-shrink: 0;
 }
 
@@ -169,58 +193,89 @@ function formatEventDate(evt: CalendarEvent): string {
 }
 
 .result-section {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .result-section h3 {
   font-size: 13px;
   color: var(--color-text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+  font-weight: 600;
+  margin-bottom: 4px;
+  padding-left: 16px;
+  font-family: var(--font-body);
 }
 
 .result-item {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 10px;
-  border-radius: var(--radius);
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  min-height: 44px;
+  border-radius: 0;
   cursor: pointer;
-  margin-bottom: 4px;
+  margin-bottom: 0;
+  background: var(--color-bg-elevated);
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity var(--transition-fast);
+  position: relative;
+}
+
+.result-item::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 44px;
+  right: 0;
+  height: 0.5px;
+  background: var(--color-border);
+}
+
+.result-item:last-child::after {
+  display: none;
+}
+
+.result-item:first-of-type {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.result-item:last-of-type {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.result-item:first-of-type:last-of-type {
+  border-radius: var(--radius);
+}
+
+.result-item:hover {
+  background: var(--color-bg-elevated);
 }
 
 .result-item:active {
-  background: var(--color-bg-secondary);
+  opacity: 0.6;
+  background: var(--color-bg-elevated);
 }
 
 .result-icon {
-  font-size: 16px;
-  margin-top: 2px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .result-title {
-  font-weight: 500;
-  font-size: 15px;
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 17px;
+  color: var(--color-text);
 }
 
 .result-preview {
-  font-size: 13px;
+  font-size: 15px;
   color: var(--color-text-secondary);
-  margin-top: 2px;
-}
-
-.no-results {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 40px;
-}
-
-.empty-state {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--color-text-secondary);
+  margin-top: 1px;
+  line-height: 1.4;
 }
 </style>
