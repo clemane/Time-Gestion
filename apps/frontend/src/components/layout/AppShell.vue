@@ -71,6 +71,7 @@ function isActive(path: string): boolean {
   flex-direction: column;
   height: 100dvh;
   overflow: hidden;
+  padding-top: var(--safe-area-top);
 }
 
 .status-bar {

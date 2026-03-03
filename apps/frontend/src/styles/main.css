@@ -49,6 +49,7 @@
   --shadow-overlay: 0 12px 48px rgba(44, 37, 32, 0.15);
 
   /* Spacing */
+  --safe-area-top: env(safe-area-inset-top, 0px);
   --safe-area-bottom: env(safe-area-inset-bottom, 0px);
   --nav-height: 64px;
 
