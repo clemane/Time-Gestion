@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { getAccessToken } from '@/api/client';
 
 const router = createRouter({
   history: createWebHistory(),
@@ -68,8 +69,20 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+let initialAuthDone = false;
+
+router.beforeEach(async (to) => {
   const auth = useAuthStore();
+
+  // On first navigation, if we have a stored token but user isn't loaded yet,
+  // try to refresh the session before deciding to redirect
+  if (!initialAuthDone) {
+    initialAuthDone = true;
+    if (getAccessToken() && !auth.isAuthenticated) {
+      await auth.refresh();
+    }
+  }
+
   if (!to.meta.public && !auth.isAuthenticated) {
     return { name: 'login' };
   }
