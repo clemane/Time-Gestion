@@ -2,9 +2,7 @@
   <div class="category-manager">
     <header class="manager-header">
       <button class="btn-back" @click="router.push('/settings')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <ChevronLeft :size="20" />
         Parametres
       </button>
       <h1>Categories</h1>
@@ -24,13 +22,15 @@
           <span class="category-name">{{ cat.name }}</span>
         </div>
         <button class="btn-delete" @click.stop="confirmDelete(cat.id)">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"/>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-          </svg>
+          <Trash2 :size="18" />
         </button>
       </div>
-      <p v-if="categories.length === 0" class="empty">Aucune categorie</p>
+      <EmptyState
+        v-if="categories.length === 0"
+        :icon="TagIcon"
+        title="Aucune categorie"
+        description="Creez une categorie pour personnaliser vos notes"
+      />
     </div>
 
     <!-- Add / Edit form -->
@@ -41,7 +41,7 @@
       <input v-model="formName" type="text" class="form-input" placeholder="Nom de la categorie" />
 
       <label class="form-label">Icone</label>
-      <input v-model="formIcon" type="text" class="form-input" placeholder="Ex: &#x1f4d6; ou texte" />
+      <input v-model="formIcon" type="text" class="form-input" placeholder="Ex: ou texte" />
 
       <label class="form-label">Couleur de fond</label>
       <div class="color-row">
@@ -96,16 +96,18 @@
     </div>
 
     <!-- Delete confirmation modal -->
-    <div v-if="deletingId" class="modal-overlay" @click="deletingId = null">
-      <div class="modal-content" @click.stop>
-        <h3>Supprimer la categorie ?</h3>
-        <p>Cette action est irreversible.</p>
-        <div class="modal-actions">
-          <button @click="deletingId = null">Annuler</button>
-          <button class="btn-danger" @click="doDelete">Supprimer</button>
+    <Transition name="modal">
+      <div v-if="deletingId" class="modal-overlay" @click="deletingId = null">
+        <div class="modal-content" @click.stop>
+          <h3>Supprimer la categorie ?</h3>
+          <p>Cette action est irreversible.</p>
+          <div class="modal-actions">
+            <button @click="deletingId = null">Annuler</button>
+            <button class="btn-danger" @click="doDelete">Supprimer</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -113,6 +115,8 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCategoriesStore } from '@/stores/categories';
+import { ChevronLeft, Trash2, Tag as TagIcon } from 'lucide-vue-next';
+import EmptyState from '@/components/ui/EmptyState.vue';
 import type { Category, CategoryStyle } from '@time-gestion/shared';
 
 const router = useRouter();
@@ -134,7 +138,6 @@ const previewBackground = computed(() => {
     return `repeating-linear-gradient(transparent, transparent ${formFontSize.value * 1.6 - 1}px, #ccc ${formFontSize.value * 1.6 - 1}px, #ccc ${formFontSize.value * 1.6}px)`;
   }
   if (formLineStyle.value === 'grid') {
-    const size = formFontSize.value * 1.6;
     return `linear-gradient(#ccc 1px, transparent 1px), linear-gradient(90deg, #ccc 1px, transparent 1px)`;
   }
   return 'none';
@@ -212,67 +215,124 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ── Category Manager · iOS Settings ── */
+
 .category-manager {
   padding-bottom: 32px;
+  background: var(--color-bg);
+  min-height: 100%;
 }
 
 .manager-header {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 12px 16px;
-  border-bottom: 1px solid var(--color-border);
+  background: var(--color-bg);
+  border-bottom: 0.5px solid var(--color-border);
 }
 
 .manager-header h1 {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text);
 }
 
 .btn-back {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: none;
   border: none;
   color: var(--color-primary);
-  font-size: 15px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
   cursor: pointer;
+  padding: 4px 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.btn-back:active {
+  opacity: 0.6;
+}
+
+/* ── Categories list (grouped tableView) ── */
+
 .categories-list {
-  padding: 16px;
+  padding: 20px 16px 0;
 }
 
 .category-card {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: 8px;
+  padding: 11px 16px;
+  background: var(--color-bg-elevated);
+  border: none;
+  border-radius: 0;
+  margin-bottom: 0;
   cursor: pointer;
-  transition: box-shadow 0.2s;
+  box-shadow: none;
+  transition: background-color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+
+.category-card:first-child {
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.category-card:last-child {
+  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+.category-card:only-child {
+  border-radius: var(--radius-lg);
+}
+
+.category-card:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 16px;
+  right: 0;
+  height: 0.5px;
+  background: var(--color-border);
+}
+
+.category-card:hover {
+  background: var(--color-bg-secondary);
 }
 
 .category-card:active {
-  box-shadow: var(--shadow);
+  background: var(--color-bg-secondary);
 }
 
 .category-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
 }
 
 .category-icon {
-  font-size: 18px;
+  font-size: 20px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
 }
 
 .category-name {
-  font-size: 15px;
-  font-weight: 500;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--color-text);
 }
 
 .btn-delete {
@@ -280,42 +340,57 @@ onMounted(async () => {
   border: none;
   color: var(--color-danger);
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
   border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.empty {
-  text-align: center;
-  color: var(--color-text-secondary);
-  padding: 20px;
+.btn-delete:active {
+  opacity: 0.6;
 }
+
+/* ── Category form (grouped section) ── */
 
 .category-form {
-  padding: 16px;
-  border-top: 1px solid var(--color-border);
+  padding: 24px 16px 0;
 }
 
 .category-form h2 {
-  font-size: 18px;
-  margin-bottom: 16px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+  color: var(--color-text-secondary);
+  padding-left: 16px;
 }
 
 .form-label {
   display: block;
+  font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 400;
   color: var(--color-text-secondary);
-  margin-bottom: 4px;
-  margin-top: 12px;
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  margin-bottom: 6px;
+  margin-top: 18px;
 }
 
 .form-input {
   width: 100%;
-  padding: 10px;
+  padding: 11px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   background: var(--color-bg);
   color: var(--color-text);
-  font-size: 15px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  transition: border-color 200ms ease;
 }
 
 .form-input:focus {
@@ -329,27 +404,37 @@ onMounted(async () => {
 
 .color-row {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
 .form-color {
-  width: 44px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 2px;
+  padding: 3px;
   cursor: pointer;
   background: var(--color-bg);
 }
 
+.form-color:active {
+  opacity: 0.7;
+}
+
+/* ── Preview ── */
+
 .preview-section {
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .preview-section h3 {
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 400;
   color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
 }
 
@@ -359,48 +444,68 @@ onMounted(async () => {
   border-radius: var(--radius);
   min-height: 80px;
   line-height: 1.6;
+  background: var(--color-bg-secondary);
+  font-family: var(--font-body);
 }
 
 .preview-box p {
   margin-bottom: 4px;
+  color: var(--color-text);
 }
+
+/* ── Form actions ── */
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 20px;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .btn-primary {
-  padding: 10px 20px;
+  padding: 11px 22px;
   background: var(--color-primary);
   color: white;
   border: none;
   border-radius: var(--radius);
-  font-size: 15px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-primary:active {
+  opacity: 0.7;
 }
 
 .btn-primary:disabled {
-  opacity: 0.5;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
 .btn-secondary {
-  padding: 10px 20px;
+  padding: 11px 22px;
   background: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text);
-  font-size: 15px;
+  border: none;
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+
+.btn-secondary:active {
+  opacity: 0.6;
+}
+
+/* ── Modal ── */
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(44, 37, 32, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -409,40 +514,103 @@ onMounted(async () => {
 }
 
 .modal-content {
-  background: var(--color-bg);
-  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  border-radius: 14px;
   padding: 24px;
   width: 100%;
-  max-width: 360px;
+  max-width: 300px;
 }
 
 .modal-content h3 {
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin-bottom: 8px;
+  color: var(--color-text);
+  text-align: center;
 }
 
 .modal-content p {
   color: var(--color-text-secondary);
-  margin-bottom: 16px;
+  font-family: var(--font-body);
+  margin-bottom: 20px;
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .modal-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  gap: 0;
+  border-top: 0.5px solid var(--color-border);
+  margin: 0 -24px -24px;
 }
 
 .modal-actions button {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: none;
+  flex: 1;
+  padding: 12px 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-actions button:first-child {
+  border-radius: 0 0 0 14px;
+  border-right: 0.5px solid var(--color-border);
+  font-weight: 600;
+}
+
+.modal-actions button:last-child {
+  border-radius: 0 0 14px 0;
+}
+
+.modal-actions button:active {
+  background: var(--color-bg-secondary);
 }
 
 .btn-danger {
-  background: var(--color-danger) !important;
-  color: white !important;
-  border-color: var(--color-danger) !important;
+  color: var(--color-danger) !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-weight: 400 !important;
+}
+
+.btn-danger:active {
+  background: var(--color-bg-secondary) !important;
+}
+
+/* ── Modal transition ── */
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity 200ms ease;
+}
+
+.modal-enter-active .modal-content,
+.modal-leave-active .modal-content {
+  transition: transform 250ms ease, opacity 200ms ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .modal-content {
+  transform: scale(0.96);
+  opacity: 0;
+}
+
+.modal-leave-to .modal-content {
+  transform: scale(0.96);
+  opacity: 0;
 }
 </style>
