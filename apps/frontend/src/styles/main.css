@@ -351,3 +351,18 @@ body.theme-transitioning * {
   transition: background-color 250ms ease, color 250ms ease,
               border-color 250ms ease !important;
 }
+
+/* ── Responsive utilities ── */
+@media (min-width: 768px) {
+  .app-content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .app-content {
+    padding-left: 40px;
+    padding-right: 40px;
+  }
+}
