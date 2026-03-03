@@ -1,6 +1,6 @@
 import { ref, computed, watchEffect, type Ref } from 'vue';
 
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark' | 'totoro' | 'system';
 
 export interface AccentColor {
   name: string;
@@ -32,7 +32,7 @@ function hexToRgba(hex: string, alpha: number): string {
 
 function loadMode(): ThemeMode {
   const stored = localStorage.getItem(STORAGE_MODE_KEY);
-  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+  if (stored === 'light' || stored === 'dark' || stored === 'totoro' || stored === 'system') return stored;
   return 'system';
 }
 
@@ -53,7 +53,7 @@ const accentColor: Ref<AccentColor> = ref(loadAccent());
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-const resolvedTheme = computed<'light' | 'dark'>(() => {
+const resolvedTheme = computed<'light' | 'dark' | 'totoro'>(() => {
   if (mode.value === 'system') {
     return darkQuery.matches ? 'dark' : 'light';
   }
@@ -82,18 +82,29 @@ export function useTheme() {
       // Apply data-theme
       doc.setAttribute('data-theme', theme);
 
-      // Apply accent color variables
-      doc.style.setProperty('--color-primary', accent.value);
-      doc.style.setProperty('--color-primary-light', accent.light);
-      doc.style.setProperty('--color-primary-dark', accent.dark);
-      const ghostAlpha = theme === 'dark' ? 0.2 : 0.1;
-      doc.style.setProperty('--color-primary-ghost', hexToRgba(accent.value, ghostAlpha));
+      // Totoro theme has its own fixed primary colors
+      if (theme === 'totoro') {
+        doc.style.setProperty('--color-primary', '#4A7C59');
+        doc.style.setProperty('--color-primary-light', '#6B9E76');
+        doc.style.setProperty('--color-primary-dark', '#3A6247');
+        doc.style.setProperty('--color-primary-ghost', 'rgba(74, 124, 89, 0.12)');
+      } else {
+        doc.style.setProperty('--color-primary', accent.value);
+        doc.style.setProperty('--color-primary-light', accent.light);
+        doc.style.setProperty('--color-primary-dark', accent.dark);
+        const ghostAlpha = theme === 'dark' ? 0.2 : 0.1;
+        doc.style.setProperty('--color-primary-ghost', hexToRgba(accent.value, ghostAlpha));
+      }
 
       // Update meta theme-color
       const meta = document.querySelector('meta[name="theme-color"]');
-      const themeColor = theme === 'dark' ? '#1C1A17' : '#FAF8F5';
+      const themeColors: Record<string, string> = {
+        dark: '#1C1A17',
+        totoro: '#F0EDE4',
+        light: '#FAF8F5',
+      };
       if (meta) {
-        meta.setAttribute('content', themeColor);
+        meta.setAttribute('content', themeColors[theme] || '#FAF8F5');
       }
     });
   }

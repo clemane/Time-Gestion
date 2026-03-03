@@ -35,7 +35,7 @@
           </button>
         </div>
 
-        <div class="accent-section">
+        <div class="accent-section" v-if="themeMode !== 'totoro'">
           <span class="accent-label">Couleur d'accent</span>
           <div class="accent-grid">
             <button
@@ -208,7 +208,7 @@ import { useSharesStore } from '@/stores/shares';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useReminders } from '@/composables/useReminders';
 import { useTheme, ACCENT_PRESETS, type ThemeMode, type AccentColor } from '@/composables/useTheme';
-import { Tag as TagIcon, ChevronRight, Check, Check as CheckIcon, X, Pencil, Trash2, Share2, FileText, FolderOpen, Calendar as CalendarIcon, Sun, Moon, Monitor } from 'lucide-vue-next';
+import { Tag as TagIcon, ChevronRight, Check, Check as CheckIcon, X, Pencil, Trash2, Share2, FileText, FolderOpen, Calendar as CalendarIcon, Sun, Moon, Monitor, TreePine } from 'lucide-vue-next';
 import EmptyState from '@/components/ui/EmptyState.vue';
 import type { ResourceType, Calendar } from '@time-gestion/shared';
 
@@ -222,6 +222,7 @@ const { mode: themeMode, accentColor: currentAccent, setMode: setThemeMode, setA
 const themeOptions = [
   { mode: 'light' as ThemeMode, label: 'Clair', icon: Sun },
   { mode: 'dark' as ThemeMode, label: 'Sombre', icon: Moon },
+  { mode: 'totoro' as ThemeMode, label: 'Totoro', icon: TreePine },
   { mode: 'system' as ThemeMode, label: 'Systeme', icon: Monitor },
 ];
 

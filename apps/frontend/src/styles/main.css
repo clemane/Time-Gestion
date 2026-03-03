@@ -328,6 +328,50 @@ h1, h2 {
   --shadow-overlay: 0 12px 48px rgba(0, 0, 0, 0.5);
 }
 
+/* ── Totoro theme — Miyazaki's forest ── */
+[data-theme="totoro"] {
+  /* Fond: campagne japonaise, papier vieilli */
+  --color-bg: #F0EDE4;
+  --color-bg-secondary: #E4DFD2;
+  --color-bg-elevated: #FAF8F3;
+  /* Texte: encre sumi, charbon de bois */
+  --color-text: #2D3028;
+  --color-text-secondary: #6B7268;
+  --color-text-tertiary: #9CA399;
+  /* Foret profonde */
+  --color-primary: #4A7C59;
+  --color-primary-light: #6B9E76;
+  --color-primary-dark: #3A6247;
+  --color-primary-ghost: rgba(74, 124, 89, 0.12);
+  /* Parapluie rouge de Satsuki */
+  --color-accent: #C75B5B;
+  --color-accent-ghost: rgba(199, 91, 91, 0.12);
+  /* Bordures: vert-gris doux */
+  --color-border: rgba(74, 124, 89, 0.1);
+  --color-border-subtle: rgba(74, 124, 89, 0.05);
+  /* Semantique */
+  --color-danger: #C75B5B;
+  --color-danger-ghost: rgba(199, 91, 91, 0.12);
+  --color-success: #5E9E5E;
+  --color-warning: #D4A843;
+  /* Bar: brume de foret */
+  --bar-bg: rgba(240, 237, 228, 0.9);
+  --bar-border: rgba(74, 124, 89, 0.08);
+  --glass-bg: rgba(240, 237, 228, 0.9);
+  --glass-border: rgba(74, 124, 89, 0.08);
+  /* Ombres teintees vert */
+  --shadow-xs: 0 1px 2px rgba(45, 48, 40, 0.04);
+  --shadow: 0 2px 8px rgba(45, 48, 40, 0.06);
+  --shadow-md: 0 4px 20px rgba(45, 48, 40, 0.07);
+  --shadow-lg: 0 8px 32px rgba(45, 48, 40, 0.1);
+  --shadow-overlay: 0 12px 48px rgba(45, 48, 40, 0.14);
+}
+
+/* Totoro grain: aquarelle japonaise */
+[data-theme="totoro"] .grain-bg::before {
+  opacity: 0.04;
+}
+
 /* Paper grain texture */
 .grain-bg::before {
   content: '';

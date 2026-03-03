@@ -17,8 +17,15 @@
         theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       }
       document.documentElement.setAttribute('data-theme', theme);
-      document.querySelector('meta[name="theme-color"]').setAttribute('content', theme === 'dark' ? '#1C1A17' : '#FAF8F5');
-      try {
+      var tc = theme === 'dark' ? '#1C1A17' : theme === 'totoro' ? '#F0EDE4' : '#FAF8F5';
+      document.querySelector('meta[name="theme-color"]').setAttribute('content', tc);
+      if (theme === 'totoro') {
+        var s = document.documentElement.style;
+        s.setProperty('--color-primary', '#4A7C59');
+        s.setProperty('--color-primary-light', '#6B9E76');
+        s.setProperty('--color-primary-dark', '#3A6247');
+        s.setProperty('--color-primary-ghost', 'rgba(74, 124, 89, 0.12)');
+      } else try {
         var accent = JSON.parse(localStorage.getItem('tg-theme-accent'));
         if (accent && accent.value) {
           var s = document.documentElement.style;
