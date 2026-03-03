@@ -36,9 +36,24 @@ const router = createRouter({
       component: () => import('@/views/CalendarView.vue'),
     },
     {
-      path: '/search',
-      name: 'search',
-      component: () => import('@/views/SearchView.vue'),
+      path: '/menu',
+      name: 'menu',
+      component: () => import('@/views/MenuView.vue'),
+    },
+    {
+      path: '/menu/recipes/new',
+      name: 'recipe-new',
+      component: () => import('@/views/RecipeFormView.vue'),
+    },
+    {
+      path: '/menu/recipes/:id',
+      name: 'recipe-detail',
+      component: () => import('@/views/RecipeDetailView.vue'),
+    },
+    {
+      path: '/menu/recipes/:id/edit',
+      name: 'recipe-edit',
+      component: () => import('@/views/RecipeFormView.vue'),
     },
     {
       path: '/settings',
