@@ -28,15 +28,37 @@
       </div>
     </header>
 
-    <MonthView v-if="currentView === 'month'" :selected-date="selectedDate" @select-date="selectedDate = $event" @navigate="onNavigate" />
-    <WeekView v-if="currentView === 'week'" :selected-date="selectedDate" @select-date="selectedDate = $event" @navigate="onNavigate" />
-    <AgendaView v-if="currentView === 'agenda'" :selected-date="selectedDate" />
+    <!-- Group filter chips -->
+    <div class="group-chips" v-if="calendarsStore.calendars.length > 0">
+      <button
+        class="group-chip"
+        :class="{ active: selectedGroupId === null }"
+        @click="selectedGroupId = null"
+      >Tous</button>
+      <button
+        v-for="cal in calendarsStore.calendars"
+        :key="cal.id"
+        class="group-chip"
+        :class="{ active: selectedGroupId === cal.id }"
+        @click="selectedGroupId = cal.id"
+      >
+        <span class="group-chip-dot" :style="{ background: cal.color }"></span>
+        {{ cal.name }}
+      </button>
+    </div>
+
+    <MonthView v-if="currentView === 'month'" :selected-date="selectedDate" :selected-group-id="selectedGroupId" @select-date="selectedDate = $event" @navigate="onNavigate" />
+    <WeekView v-if="currentView === 'week'" :selected-date="selectedDate" :selected-group-id="selectedGroupId" @select-date="selectedDate = $event" @navigate="onNavigate" />
+    <AgendaView v-if="currentView === 'agenda'" :selected-date="selectedDate" :selected-group-id="selectedGroupId" />
 
     <!-- Day detail: events and dated notes for selected day -->
     <div v-if="currentView !== 'agenda' && selectedDayItems.length > 0" class="day-detail">
       <h3>{{ formatDateFull(selectedDate) }}</h3>
       <div v-for="item in selectedDayItems" :key="item.id" class="day-item" :style="{ borderLeftColor: item.color }" @click="item.type === 'event' ? editEvent(item.id) : openNote(item.id)">
-        <span class="item-type">{{ item.type === 'event' ? '\u{1f4c5}' : '\u{1f4dd}' }}</span>
+        <span class="item-type">
+          <CalendarIcon v-if="item.type === 'event'" :size="14" />
+          <FileText v-else :size="14" />
+        </span>
         <div>
           <div class="item-title">{{ item.title }}</div>
           <div v-if="item.time" class="item-time">{{ item.time }}</div>
@@ -45,7 +67,9 @@
     </div>
 
     <!-- FAB to create event -->
-    <button class="fab" @click="showEventForm = true">+</button>
+    <button class="fab" :class="{ 'fab-open': showEventForm }" @click="showEventForm = true">
+      <Plus :size="24" />
+    </button>
 
     <!-- Event form modal -->
     <EventForm v-if="showEventForm" :initial-date="selectedDate" :event="editingEvent" @close="showEventForm = false; editingEvent = null" @saved="onEventSaved" />
@@ -64,6 +88,7 @@ import MonthView from '@/components/calendar/MonthView.vue';
 import WeekView from '@/components/calendar/WeekView.vue';
 import AgendaView from '@/components/calendar/AgendaView.vue';
 import EventForm from '@/components/calendar/EventForm.vue';
+import { Calendar as CalendarIcon, FileText, Plus } from 'lucide-vue-next';
 import type { CalendarEvent } from '@time-gestion/shared';
 
 const router = useRouter();
@@ -81,14 +106,15 @@ const ptr = usePullToRefresh(async () => {
 
 const currentView = ref<'month' | 'week' | 'agenda'>('month');
 const selectedDate = ref(new Date().toISOString().split('T')[0]);
+const selectedGroupId = ref<string | null>(null);
 const showEventForm = ref(false);
 const editingEvent = ref<CalendarEvent | null>(null);
 
 const selectedDayItems = computed(() => {
   const items: Array<{ id: string; title: string; time: string; color: string; type: 'event' | 'note' }> = [];
 
-  // Events for selected day
   for (const evt of eventsStore.events) {
+    if (selectedGroupId.value && evt.calendarId !== selectedGroupId.value) continue;
     const evtDate = evt.startAt.split('T')[0];
     if (evtDate === selectedDate.value) {
       const cal = calendarsStore.calendars.find(c => c.id === evt.calendarId);
@@ -97,12 +123,13 @@ const selectedDayItems = computed(() => {
     }
   }
 
-  // Dated notes for selected day
   for (const note of notesStore.notes) {
+    if (selectedGroupId.value && note.calendarId !== selectedGroupId.value) continue;
     if (note.scheduledDate) {
       const noteDate = note.scheduledDate.split('T')[0];
       if (noteDate === selectedDate.value) {
-        items.push({ id: note.id, title: note.title, time: note.scheduledTime || '', color: '#6b7280', type: 'note' });
+        const cal = note.calendarId ? calendarsStore.calendars.find(c => c.id === note.calendarId) : null;
+        items.push({ id: note.id, title: note.title, time: note.scheduledTime || '', color: cal?.color || '#6b7280', type: 'note' });
       }
     }
   }
@@ -143,13 +170,18 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ── Calendar View · iOS Calendar Aesthetic ── */
+
 .calendar-view {
   position: relative;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  background: var(--color-bg);
 }
+
+/* ── Pull-to-refresh ── */
 
 .pull-indicator {
   display: flex;
@@ -157,123 +189,264 @@ onMounted(async () => {
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  transition: height 0.2s;
+  transition: height 300ms ease;
 }
 
 .pull-arrow {
-  transition: transform 0.2s;
-  color: var(--color-text-secondary);
+  transition: transform 300ms ease;
+  color: var(--color-text-tertiary);
   transform: rotate(180deg);
+  opacity: 0.6;
 }
 
 .pull-arrow.pull-ready {
   transform: rotate(0deg);
   color: var(--color-primary);
+  opacity: 1;
 }
 
 .pull-spinner {
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--color-border);
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-border);
   border-top-color: var(--color-primary);
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+/* ── Header ── */
+
 .cal-header {
-  padding: 16px;
+  padding: 16px 20px 12px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
 }
 
 .cal-header h1 {
-  font-size: 28px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--color-text);
+  line-height: 1.1;
 }
+
+/* ── View tabs (iOS Segmented Control) ── */
 
 .view-tabs {
   display: flex;
   background: var(--color-bg-secondary);
-  border-radius: var(--radius);
-  overflow: hidden;
+  border-radius: var(--radius-full);
+  padding: 3px;
+  gap: 0;
 }
 
 .view-tabs button {
-  padding: 6px 12px;
+  padding: 6px 14px;
   border: none;
   background: none;
+  font-family: var(--font-body);
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
-  color: var(--color-text-secondary);
+  color: var(--color-text);
+  border-radius: var(--radius-full);
+  transition: background 200ms ease, box-shadow 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 30px;
+}
+
+.view-tabs button:active {
+  opacity: 0.7;
 }
 
 .view-tabs button.active {
   background: var(--color-primary);
   color: white;
+  box-shadow: none;
+  font-weight: 600;
 }
 
+/* ── Group filter chips ── */
+
+.group-chips {
+  display: flex;
+  gap: 8px;
+  padding: 0 20px 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.group-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.group-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 36px;
+  transition: background 200ms ease, color 200ms ease, border-color 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.group-chip:active {
+  opacity: 0.7;
+}
+
+.group-chip.active {
+  background: var(--color-primary-ghost);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  font-weight: 600;
+}
+
+.group-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.group-chip.active .group-chip-dot {
+  opacity: 1;
+}
+
+/* ── Day detail section ── */
+
 .day-detail {
-  padding: 12px 16px;
-  border-top: 1px solid var(--color-border);
+  padding: 16px 20px;
   overflow-y: auto;
   flex: 1;
 }
 
 .day-detail h3 {
+  font-family: var(--font-display);
   font-size: 14px;
   color: var(--color-text-secondary);
   text-transform: capitalize;
   margin-bottom: 8px;
+  font-weight: 400;
 }
+
+/* ── Day items (list rows) ── */
 
 .day-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
+  gap: 12px;
+  padding: 12px 16px;
   border-left: 3px solid;
-  border-radius: 0 var(--radius) var(--radius) 0;
-  background: var(--color-bg-secondary);
-  margin-bottom: 6px;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+  box-shadow: none;
+  margin-bottom: 0;
   cursor: pointer;
+  min-height: 44px;
+  transition: background 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.day-item + .day-item {
+  border-top: 1px solid var(--color-border);
+}
+
+.day-item:first-child {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.day-item:last-child {
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.day-item:only-child {
+  border-radius: var(--radius);
+}
+
+.day-item:active {
+  background: var(--color-bg-secondary);
 }
 
 .item-type {
-  font-size: 16px;
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
 .item-title {
+  font-family: var(--font-body);
   font-weight: 500;
   font-size: 15px;
+  color: var(--color-text);
 }
 
 .item-time {
+  font-family: var(--font-body);
   font-size: 13px;
   color: var(--color-text-secondary);
+  margin-top: 1px;
 }
+
+/* ── FAB ── */
 
 .fab {
   position: fixed;
-  bottom: calc(72px + var(--safe-area-bottom));
+  bottom: calc(80px + var(--safe-area-bottom, 0px));
   right: 20px;
   width: 56px;
   height: 56px;
-  border-radius: 50%;
+  border-radius: 16px;
   background: var(--color-primary);
   color: white;
   border: none;
-  font-size: 28px;
-  font-weight: 300;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
   z-index: 50;
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 200ms ease, transform 200ms ease;
+  -webkit-tap-highlight-color: transparent;
+  animation: fab-in 300ms ease both;
+}
+
+.fab:active {
+  opacity: 0.7;
+}
+
+.fab-open {
+  transform: rotate(45deg);
+}
+
+@keyframes fab-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 </style>
