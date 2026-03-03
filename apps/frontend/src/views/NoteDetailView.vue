@@ -2,64 +2,102 @@
   <div class="note-detail" v-if="note">
     <header class="detail-header">
       <button class="btn-back" @click="router.push('/notes')">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
+        <ChevronLeft :size="20" />
         Notes
       </button>
       <div class="header-actions">
         <button class="btn-icon" @click="togglePin" :title="note.isPinned ? 'Desepingler' : 'Epingler'">
-          {{ note.isPinned ? '\u{1f4cc}' : '\u{1f4cd}' }}
+          <Pin v-if="note.isPinned" :size="18" />
+          <PinOff v-else :size="18" />
         </button>
-        <button class="btn-icon" @click="showMenu = !showMenu">&#x22ee;</button>
+        <button class="btn-icon" @click="showMenu = !showMenu">
+          <MoreVertical :size="18" />
+        </button>
       </div>
     </header>
 
     <!-- Menu dropdown -->
-    <div v-if="showMenu" class="dropdown-menu">
-      <button @click="pickDate">&#x1f4c5; Assigner une date</button>
-      <button @click="pickCategory">&#x1f3f7;&#xfe0f; Categorie</button>
-      <button @click="openShare">&#x1f517; Partager</button>
-      <button @click="deleteNote" class="danger">&#x1f5d1;&#xfe0f; Supprimer</button>
-    </div>
+    <Transition name="dropdown">
+      <div v-if="showMenu" class="dropdown-menu">
+        <button @click="openShare"><Link2 :size="16" /> Partager</button>
+        <button @click="deleteNote" class="danger"><Trash2 :size="16" /> Supprimer</button>
+      </div>
+    </Transition>
 
     <!-- Title -->
-    <input class="note-title-input" v-model="title" @input="debouncedSave" placeholder="Titre" />
+    <input class="note-title-input" v-model="title" @input="debouncedSave" placeholder="Titre" :style="categoryTextColor ? { color: categoryTextColor, backgroundColor: categoryStyle?.backgroundColor } : {}" />
 
-    <!-- Date indicator -->
-    <div v-if="note.scheduledDate" class="scheduled-badge" @click="pickDate">
-      &#x1f4c5; {{ formatDate(note.scheduledDate) }}
-      <span v-if="note.scheduledTime">a {{ note.scheduledTime }}</span>
+    <!-- Quick actions bar (date + category) -->
+    <div class="quick-actions">
+      <button class="quick-action-chip" @click="pickDate">
+        <span class="chip-icon"><CalendarDays :size="14" /></span>
+        <span v-if="note.scheduledDate" class="chip-text">
+          {{ formatDate(note.scheduledDate) }}
+          <span v-if="note.scheduledTime"> {{ note.scheduledTime }}</span>
+        </span>
+        <span v-else class="chip-text chip-placeholder">Ajouter une date</span>
+      </button>
+      <button class="quick-action-chip" @click="pickCategory">
+        <span class="chip-icon" v-if="currentCategory">{{ currentCategory.icon }}</span>
+        <span class="chip-icon" v-else><Tag :size="14" /></span>
+        <span class="chip-text" v-if="currentCategory">{{ currentCategory.name }}</span>
+        <span class="chip-text chip-placeholder" v-else>Categorie</span>
+      </button>
+      <button class="quick-action-chip" @click="pickGroup">
+        <span class="chip-icon" v-if="currentGroup"><span class="group-dot" :style="{ background: currentGroup.color }"></span></span>
+        <span class="chip-icon" v-else><Users :size="14" /></span>
+        <span class="chip-text" v-if="currentGroup">{{ currentGroup.name }}</span>
+        <span class="chip-text chip-placeholder" v-else>Groupe</span>
+      </button>
     </div>
 
     <!-- Editor -->
     <NoteEditor v-model="content" :category-style="categoryStyle" />
 
     <!-- Date picker modal -->
-    <div v-if="showDatePicker" class="modal-overlay" @click="showDatePicker = false">
-      <div class="modal-content" @click.stop>
-        <h3>Assigner une date</h3>
-        <input type="date" v-model="scheduledDate" />
-        <input type="time" v-model="scheduledTime" />
-        <div class="modal-actions">
-          <button @click="clearDate">Retirer</button>
-          <button class="btn-primary-sm" @click="saveDate">Enregistrer</button>
+    <Transition name="modal">
+      <div v-if="showDatePicker" class="modal-overlay" @click="showDatePicker = false">
+        <div class="modal-content" @click.stop>
+          <h3>Assigner une date</h3>
+          <input type="date" v-model="scheduledDate" />
+          <input type="time" v-model="scheduledTime" />
+          <div class="modal-actions">
+            <button @click="clearDate">Retirer</button>
+            <button class="btn-primary-sm" @click="saveDate">Enregistrer</button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
 
     <!-- Category picker modal -->
-    <div v-if="showCategoryPicker" class="modal-overlay" @click="showCategoryPicker = false">
-      <div class="modal-content" @click.stop>
-        <h3>Categorie</h3>
-        <button v-for="cat in categories" :key="cat.id" class="category-option" :class="{ active: note.categoryId === cat.id }" @click="selectCategory(cat.id)">
-          {{ cat.name }}
-        </button>
-        <button class="category-option" :class="{ active: !note.categoryId }" @click="selectCategory(null)">
-          Aucune
-        </button>
+    <Transition name="modal">
+      <div v-if="showCategoryPicker" class="modal-overlay" @click="showCategoryPicker = false">
+        <div class="modal-content" @click.stop>
+          <h3>Categorie</h3>
+          <button v-for="cat in categories" :key="cat.id" class="category-option" :class="{ active: note.categoryId === cat.id }" @click="selectCategory(cat.id)">
+            <span class="cat-icon">{{ cat.icon }}</span> {{ cat.name }}
+          </button>
+          <button class="category-option" :class="{ active: !note.categoryId }" @click="selectCategory(null)">
+            Aucune
+          </button>
+        </div>
       </div>
-    </div>
+    </Transition>
+
+    <!-- Group picker modal -->
+    <Transition name="modal">
+      <div v-if="showGroupPicker" class="modal-overlay" @click="showGroupPicker = false">
+        <div class="modal-content" @click.stop>
+          <h3>Groupe</h3>
+          <button v-for="cal in calendarsStore.calendars" :key="cal.id" class="category-option" :class="{ active: note.calendarId === cal.id }" @click="selectGroup(cal.id)">
+            <span class="group-dot" :style="{ background: cal.color }"></span> {{ cal.name }}
+          </button>
+          <button class="category-option" :class="{ active: !note.calendarId }" @click="selectGroup(null)">
+            Aucun
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Share dialog -->
     <ShareDialog
@@ -76,14 +114,25 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useNotesStore } from '@/stores/notes';
 import { useCategoriesStore } from '@/stores/categories';
+import { useCalendarsStore } from '@/stores/calendars';
 import NoteEditor from '@/components/editor/NoteEditor.vue';
 import ShareDialog from '@/components/sharing/ShareDialog.vue';
+import { ChevronLeft, Pin, PinOff, MoreVertical, Link2, Trash2, CalendarDays, Tag, Users } from 'lucide-vue-next';
 import type { CategoryStyle } from '@time-gestion/shared';
+
+function isLightColor(hex: string): boolean {
+  const c = hex.replace('#', '');
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
 
 const route = useRoute();
 const router = useRouter();
 const notesStore = useNotesStore();
 const categoriesStore = useCategoriesStore();
+const calendarsStore = useCalendarsStore();
 
 const noteId = computed(() => route.params.id as string);
 const note = computed(() => notesStore.notes.find(n => n.id === noteId.value));
@@ -94,14 +143,28 @@ const content = ref<Record<string, unknown>>({});
 const showMenu = ref(false);
 const showDatePicker = ref(false);
 const showCategoryPicker = ref(false);
+const showGroupPicker = ref(false);
 const showShareDialog = ref(false);
 const scheduledDate = ref('');
 const scheduledTime = ref('');
 
-const categoryStyle = computed<CategoryStyle | null>(() => {
+const currentGroup = computed(() => {
+  if (!note.value?.calendarId) return null;
+  return calendarsStore.calendars.find(c => c.id === note.value!.calendarId) || null;
+});
+
+const currentCategory = computed(() => {
   if (!note.value?.categoryId) return null;
-  const cat = categories.value.find(c => c.id === note.value!.categoryId);
-  return (cat?.style as CategoryStyle) || null;
+  return categories.value.find(c => c.id === note.value!.categoryId) || null;
+});
+
+const categoryStyle = computed<CategoryStyle | null>(() => {
+  return (currentCategory.value?.style as CategoryStyle) || null;
+});
+
+const categoryTextColor = computed(() => {
+  if (!categoryStyle.value?.backgroundColor) return undefined;
+  return isLightColor(categoryStyle.value.backgroundColor) ? '#111827' : '#f9fafb';
 });
 
 let saveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -155,8 +218,30 @@ function pickCategory() {
   showCategoryPicker.value = true;
 }
 
+function pickGroup() {
+  showMenu.value = false;
+  showGroupPicker.value = true;
+}
+
+async function selectGroup(groupId: string | null) {
+  await notesStore.update(noteId.value, { calendarId: groupId });
+  showGroupPicker.value = false;
+}
+
 async function selectCategory(catId: string | null) {
-  await notesStore.update(noteId.value, { categoryId: catId });
+  const updateData: Record<string, unknown> = { categoryId: catId };
+
+  if (catId) {
+    const cat = categories.value.find(c => c.id === catId);
+    const isContentEmpty = !content.value?.content || (Array.isArray(content.value.content) && content.value.content.length === 0);
+    if (cat?.defaultContent && isContentEmpty) {
+      const dc = cat.defaultContent as Record<string, unknown>;
+      updateData.content = dc;
+      content.value = dc;
+    }
+  }
+
+  await notesStore.update(noteId.value, updateData);
   showCategoryPicker.value = false;
 }
 
@@ -173,6 +258,7 @@ function formatDate(d: string) {
 onMounted(async () => {
   await notesStore.loadFromLocal();
   await categoriesStore.loadFromLocal();
+  await calendarsStore.loadFromLocal();
   if (note.value) {
     title.value = note.value.title;
     content.value = note.value.content as Record<string, unknown>;
@@ -183,169 +269,311 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ── Layout ── */
 .note-detail {
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--color-bg-elevated);
 }
 
+/* ── Header ── */
 .detail-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 16px;
+  padding: 10px 16px;
+  position: relative;
+  background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border);
 }
 
+/* ── Back button: text + chevron in iOS blue ── */
 .btn-back {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
   background: none;
   border: none;
   color: var(--color-primary);
-  font-size: 15px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 400;
   cursor: pointer;
+  padding: 0;
+  margin: 0;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-back:active {
+  opacity: 0.5;
 }
 
 .header-actions {
   display: flex;
-  gap: 4px;
+  gap: 0;
 }
 
+/* ── Icon buttons: no background, 44px touch target ── */
 .btn-icon {
   background: none;
   border: none;
-  font-size: 18px;
-  padding: 6px 8px;
+  padding: 0;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
-  border-radius: var(--radius);
+  color: var(--color-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.btn-icon:active {
+  opacity: 0.5;
+}
+
+/* ── Dropdown menu: solid white, small shadow, no glass ── */
 .dropdown-menu {
   position: absolute;
   right: 16px;
   top: 52px;
-  background: var(--color-bg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
+  border: 1px solid var(--color-border);
   z-index: 100;
   overflow: hidden;
+  min-width: 200px;
+  transform-origin: top right;
 }
 
 .dropdown-menu button {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 10px 16px;
+  padding: 12px 16px;
   border: none;
   background: none;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
   cursor: pointer;
   color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dropdown-menu button + button {
+  border-top: 0.5px solid var(--color-border);
+}
+
+.dropdown-menu button:active {
+  background: var(--color-bg-secondary);
 }
 
 .dropdown-menu button.danger {
   color: var(--color-danger);
 }
 
+.dropdown-menu button.danger:active {
+  background: var(--color-danger-ghost);
+}
+
+/* ── Title input: large, bold, clean ── */
 .note-title-input {
   border: none;
-  padding: 16px;
-  font-size: 22px;
-  font-weight: 700;
+  padding: 20px 16px 8px;
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 400;
+  letter-spacing: 0;
   color: var(--color-text);
   background: transparent;
   width: 100%;
   outline: none;
+  line-height: 1.2;
 }
 
-.scheduled-badge {
-  margin: 0 16px 12px;
+.note-title-input::placeholder {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+}
+
+/* ── Quick actions bar: simple text buttons in iOS blue ── */
+.quick-actions {
+  display: flex;
+  gap: 16px;
+  padding: 4px 16px 14px;
+  flex-wrap: wrap;
+}
+
+.quick-action-chip {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
   background: var(--color-bg-secondary);
-  border-radius: 20px;
-  font-size: 13px;
+  border-radius: var(--radius-full);
+  padding: 6px 12px;
+  gap: 6px;
+  border: none;
+  font-family: var(--font-body);
+  font-size: 14px;
   color: var(--color-primary);
   cursor: pointer;
-  width: fit-content;
+  -webkit-tap-highlight-color: transparent;
 }
 
+.quick-action-chip:active {
+  opacity: 0.5;
+}
+
+.chip-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  color: var(--color-primary);
+}
+
+.chip-text {
+  font-weight: 400;
+}
+
+.chip-placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* ── Group dot ── */
+.group-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* ── Modal overlay: semi-transparent dark, NO blur ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.4);
+  background: rgba(44, 37, 32, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 300;
-  padding: 16px;
+  padding: 24px;
 }
 
+/* ── Modal content: solid background, iOS alert style ── */
 .modal-content {
-  background: var(--color-bg);
+  background: var(--color-bg-elevated);
   border-radius: var(--radius-lg);
   padding: 24px;
   width: 100%;
-  max-width: 360px;
+  max-width: 320px;
+  box-shadow: var(--shadow-overlay);
 }
 
 .modal-content h3 {
-  margin-bottom: 16px;
+  margin-bottom: 18px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+  text-align: center;
 }
 
 .modal-content input {
   width: 100%;
-  padding: 10px;
+  padding: 11px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   margin-bottom: 12px;
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 15px;
   background: var(--color-bg);
   color: var(--color-text);
+  outline: none;
+}
+
+.modal-content input:focus {
+  border-color: var(--color-primary);
+  box-shadow: none;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .modal-actions button {
-  padding: 8px 16px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
+  padding: 0;
+  border: none;
+  border-radius: 0;
   background: none;
   cursor: pointer;
-  color: var(--color-text);
+  color: var(--color-primary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 17px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.modal-actions button:active {
+  opacity: 0.5;
 }
 
 .btn-primary-sm {
-  background: var(--color-primary) !important;
-  color: white !important;
-  border-color: var(--color-primary) !important;
+  background: none !important;
+  color: var(--color-primary) !important;
+  font-weight: 600 !important;
 }
 
+.btn-primary-sm:active {
+  opacity: 0.5;
+}
+
+/* ── Category / group option buttons: list rows with separators ── */
 .category-option {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   width: 100%;
   text-align: left;
-  padding: 10px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  margin-bottom: 8px;
+  padding: 13px 0;
+  border: none;
+  border-bottom: 0.5px solid var(--color-border);
+  margin-bottom: 0;
   background: none;
   cursor: pointer;
   color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.category-option:last-child {
+  border-bottom: none;
+}
+
+.category-option:active {
+  background: var(--color-bg-secondary);
 }
 
 .category-option.active {
-  border-color: var(--color-primary);
-  background: rgba(79, 70, 229, 0.1);
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.cat-icon {
+  font-size: 17px;
+  flex-shrink: 0;
 }
 </style>
