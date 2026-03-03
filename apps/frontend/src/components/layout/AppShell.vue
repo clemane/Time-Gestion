@@ -29,15 +29,25 @@
       <slot />
     </main>
 
+    <Transition name="totoro-enter">
+      <TotoroMascot v-if="isTotoro" />
+    </Transition>
+
     <BottomNav />
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import BottomNav from './BottomNav.vue';
+import TotoroMascot from '@/components/ui/TotoroMascot.vue';
 import { isOnline } from '@/sync/online';
+import { useTheme } from '@/composables/useTheme';
 import { FileText, Calendar, UtensilsCrossed, Settings, WifiOff } from 'lucide-vue-next';
+
+const { resolvedTheme } = useTheme();
+const isTotoro = computed(() => resolvedTheme.value === 'totoro');
 
 const route = useRoute();
 
@@ -165,5 +175,21 @@ function isActive(path: string): boolean {
 .sidebar-link.active {
   background: var(--color-primary-ghost);
   color: var(--color-primary);
+}
+
+/* ── Totoro mascot transition ── */
+.totoro-enter-enter-active {
+  transition: opacity 400ms ease, transform 400ms var(--spring);
+}
+.totoro-enter-leave-active {
+  transition: opacity 300ms ease, transform 300ms ease;
+}
+.totoro-enter-enter-from {
+  opacity: 0;
+  transform: translateY(20px) scale(0.6);
+}
+.totoro-enter-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.8);
 }
 </style>
