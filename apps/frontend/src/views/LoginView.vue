@@ -1,6 +1,8 @@
 <template>
   <div class="auth-page">
+    <div class="auth-bg"></div>
     <div class="auth-card">
+      <div class="auth-logo">TG</div>
       <h1>Time Gestion</h1>
       <p class="subtitle">Connectez-vous a votre compte</p>
       <form @submit.prevent="handleLogin">
@@ -55,30 +57,59 @@ async function handleLogin() {
   align-items: center;
   justify-content: center;
   min-height: 100dvh;
-  padding: 16px;
-  background: var(--color-bg-secondary);
+  padding: 24px;
+  background: linear-gradient(160deg, var(--color-bg) 0%, var(--color-bg-secondary) 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-bg {
+  display: none;
 }
 
 .auth-card {
-  background: var(--color-bg);
-  border-radius: var(--radius-lg);
-  padding: 32px 24px;
+  position: relative;
+  background: var(--color-bg-elevated);
+  border: none;
+  border-radius: var(--radius-xl);
+  padding: 40px 24px 32px;
   width: 100%;
-  max-width: 400px;
+  max-width: 380px;
   box-shadow: var(--shadow-lg);
+  animation: auth-enter 400ms ease both;
+}
+
+.auth-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  margin: 0 auto 16px;
+  letter-spacing: -0.02em;
 }
 
 .auth-card h1 {
+  font-family: var(--font-display);
   font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0;
   margin-bottom: 4px;
   text-align: center;
+  color: var(--color-text);
 }
 
 .subtitle {
   color: var(--color-text-secondary);
   text-align: center;
-  margin-bottom: 24px;
-  font-size: 14px;
+  margin-bottom: 28px;
+  font-size: 15px;
 }
 
 .field {
@@ -87,59 +118,77 @@ async function handleLogin() {
 
 .field label {
   display: block;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 13px;
+  font-weight: 600;
   margin-bottom: 6px;
+  color: var(--color-text-secondary);
 }
 
 .field input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 14px 16px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  background: var(--color-bg);
+  background: var(--color-bg-elevated);
   color: var(--color-text);
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 17px;
+  transition: border-color var(--transition-fast);
 }
 
 .field input:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.field input::placeholder {
+  color: var(--color-text-tertiary);
 }
 
 .error {
   color: var(--color-danger);
-  font-size: 14px;
+  font-size: 13px;
   margin-bottom: 12px;
+  padding: 10px 14px;
+  background: var(--color-danger-ghost);
+  border-radius: var(--radius);
+  font-weight: 500;
 }
 
 .btn-primary {
   width: 100%;
-  padding: 12px;
+  height: 50px;
+  padding: 0 20px;
   background: var(--color-primary);
   color: white;
   border: none;
   border-radius: var(--radius);
-  font-size: 16px;
+  font-family: var(--font-body);
+  font-size: 17px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: opacity var(--transition-fast);
 }
 
-.btn-primary:hover {
-  background: var(--color-primary-dark);
+.btn-primary:active {
+  opacity: 0.7;
 }
 
 .btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .link {
   text-align: center;
-  margin-top: 16px;
-  font-size: 14px;
+  margin-top: 20px;
+  font-size: 15px;
   color: var(--color-text-secondary);
+}
+
+.link a {
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 17px;
 }
 </style>
