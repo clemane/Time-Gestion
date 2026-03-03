@@ -1,83 +1,88 @@
 <template>
-  <div class="modal-overlay" @click="$emit('close')">
-    <div class="event-form" @click.stop>
-      <header>
-        <h2>{{ isEditing ? 'Modifier' : 'Nouvel evenement' }}</h2>
-        <button class="btn-close" @click="$emit('close')">&times;</button>
-      </header>
+  <Transition name="modal">
+    <div class="modal-overlay" @click="$emit('close')">
+      <div class="event-form" @click.stop>
+        <header>
+          <h2>{{ isEditing ? 'Modifier' : 'Nouvel evenement' }}</h2>
+          <button class="btn-close" @click="$emit('close')">
+            <X :size="20" />
+          </button>
+        </header>
 
-      <form @submit.prevent="save">
-        <div class="field">
-          <label>Titre</label>
-          <input v-model="title" required placeholder="Titre de l'evenement" />
-        </div>
-
-        <div class="field">
-          <label>Calendrier</label>
-          <select v-model="calendarId">
-            <option v-for="cal in calendars" :key="cal.id" :value="cal.id">{{ cal.name }}</option>
-          </select>
-        </div>
-
-        <div class="field-row">
+        <form @submit.prevent="save">
           <div class="field">
-            <label>Debut</label>
-            <input type="date" v-model="startDate" required />
-            <input v-if="!allDay" type="time" v-model="startTime" />
+            <label>Titre</label>
+            <input v-model="title" required placeholder="Titre de l'evenement" />
           </div>
+
           <div class="field">
-            <label>Fin</label>
-            <input type="date" v-model="endDate" required />
-            <input v-if="!allDay" type="time" v-model="endTime" />
+            <label>Groupe</label>
+            <select v-model="calendarId">
+              <option v-for="cal in calendars" :key="cal.id" :value="cal.id">{{ cal.name }}</option>
+            </select>
           </div>
-        </div>
 
-        <label class="checkbox-field">
-          <input type="checkbox" v-model="allDay" />
-          Toute la journee
-        </label>
+          <div class="field-row">
+            <div class="field">
+              <label>Debut</label>
+              <input type="date" v-model="startDate" required />
+              <input v-if="!allDay" type="time" v-model="startTime" />
+            </div>
+            <div class="field">
+              <label>Fin</label>
+              <input type="date" v-model="endDate" required />
+              <input v-if="!allDay" type="time" v-model="endTime" />
+            </div>
+          </div>
 
-        <div class="field">
-          <label>Recurrence</label>
-          <select v-model="recurrence">
-            <option value="">Aucune</option>
-            <option value="FREQ=DAILY">Tous les jours</option>
-            <option value="FREQ=WEEKLY">Chaque semaine</option>
-            <option value="FREQ=MONTHLY">Chaque mois</option>
-            <option value="FREQ=YEARLY">Chaque annee</option>
-          </select>
-        </div>
+          <label class="checkbox-field">
+            <input type="checkbox" v-model="allDay" />
+            Toute la journee
+          </label>
 
-        <div class="field">
-          <label>Rappel</label>
-          <select v-model="reminder">
-            <option :value="null">Aucun</option>
-            <option :value="5">5 minutes avant</option>
-            <option :value="15">15 minutes avant</option>
-            <option :value="30">30 minutes avant</option>
-            <option :value="60">1 heure avant</option>
-            <option :value="1440">1 jour avant</option>
-          </select>
-        </div>
+          <div class="field">
+            <label>Recurrence</label>
+            <select v-model="recurrence">
+              <option value="">Aucune</option>
+              <option value="FREQ=DAILY">Tous les jours</option>
+              <option value="FREQ=WEEKLY">Chaque semaine</option>
+              <option value="FREQ=MONTHLY">Chaque mois</option>
+              <option value="FREQ=YEARLY">Chaque annee</option>
+            </select>
+          </div>
 
-        <div class="field">
-          <label>Description</label>
-          <textarea v-model="description" rows="3" placeholder="Description optionnelle"></textarea>
-        </div>
+          <div class="field">
+            <label>Rappel</label>
+            <select v-model="reminder">
+              <option :value="null">Aucun</option>
+              <option :value="5">5 minutes avant</option>
+              <option :value="15">15 minutes avant</option>
+              <option :value="30">30 minutes avant</option>
+              <option :value="60">1 heure avant</option>
+              <option :value="1440">1 jour avant</option>
+            </select>
+          </div>
 
-        <div class="form-actions">
-          <button v-if="isEditing" type="button" class="btn-danger" @click="deleteEvent">Supprimer</button>
-          <button type="submit" class="btn-primary-sm">{{ isEditing ? 'Enregistrer' : 'Creer' }}</button>
-        </div>
-      </form>
+          <div class="field">
+            <label>Description</label>
+            <textarea v-model="description" rows="3" placeholder="Description optionnelle"></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button v-if="isEditing" type="button" class="btn-danger" @click="deleteEvent">Supprimer</button>
+            <button type="submit" class="btn-primary-sm">{{ isEditing ? 'Enregistrer' : 'Creer' }}</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
+import { X } from 'lucide-vue-next';
 import type { CalendarEvent } from '@time-gestion/shared';
 
 const props = defineProps<{
@@ -167,7 +172,7 @@ onMounted(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(44, 37, 32, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -176,13 +181,14 @@ onMounted(() => {
 }
 
 .event-form {
-  background: var(--color-bg);
-  border-radius: var(--radius-lg);
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-xl);
   padding: 24px;
   width: 100%;
   max-width: 420px;
   max-height: 90vh;
   overflow-y: auto;
+  box-shadow: var(--shadow-overlay);
 }
 
 .event-form header {
@@ -193,47 +199,59 @@ onMounted(() => {
 }
 
 .event-form header h2 {
-  font-size: 18px;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 400;
+  color: var(--color-text);
 }
 
 .btn-close {
   background: none;
   border: none;
-  font-size: 22px;
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: var(--radius);
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.15s ease;
 }
 
 .btn-close:hover {
-  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+.btn-close:active {
+  opacity: 0.6;
 }
 
 .field {
-  margin-bottom: 14px;
+  margin-bottom: 16px;
 }
 
 .field label {
   display: block;
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 600;
   color: var(--color-text-secondary);
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 
 .field input,
 .field select,
 .field textarea {
   width: 100%;
-  padding: 10px;
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
+  font-family: var(--font-body);
   font-size: 15px;
   background: var(--color-bg);
   color: var(--color-text);
   outline: none;
+  transition: border-color 0.2s ease;
 }
 
 .field input:focus,
@@ -244,10 +262,11 @@ onMounted(() => {
 
 .field textarea {
   resize: vertical;
+  min-height: 80px;
 }
 
 .field input[type="time"] {
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .field-row {
@@ -262,56 +281,101 @@ onMounted(() => {
 .checkbox-field {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  margin-bottom: 14px;
+  gap: 10px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 400;
+  margin-bottom: 16px;
   cursor: pointer;
   color: var(--color-text);
+  -webkit-tap-highlight-color: transparent;
 }
 
 .checkbox-field input[type="checkbox"] {
   width: 18px;
   height: 18px;
   accent-color: var(--color-primary);
+  border-radius: 4px;
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 12px;
   margin-top: 20px;
   padding-top: 16px;
-  border-top: 1px solid var(--color-border);
+  border-top: 0.5px solid var(--color-border-subtle);
 }
 
 .btn-danger {
-  padding: 8px 16px;
-  border: 1px solid var(--color-danger);
+  padding: 10px 16px;
+  border: none;
   border-radius: var(--radius);
   background: none;
   color: var(--color-danger);
   cursor: pointer;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 500;
   margin-right: auto;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
 }
 
 .btn-danger:hover {
-  background: var(--color-danger);
-  color: white;
+  opacity: 0.7;
+}
+
+.btn-danger:active {
+  opacity: 0.5;
 }
 
 .btn-primary-sm {
-  padding: 8px 20px;
+  padding: 10px 20px;
   border: none;
   border-radius: var(--radius);
   background: var(--color-primary);
   color: white;
   cursor: pointer;
-  font-size: 14px;
+  font-family: var(--font-body);
+  font-size: 15px;
   font-weight: 600;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s ease;
 }
 
 .btn-primary-sm:hover {
-  background: var(--color-primary-dark);
+  opacity: 0.85;
+}
+
+.btn-primary-sm:active {
+  opacity: 0.7;
+}
+
+/* Modal transition */
+
+.modal-enter-active,
+.modal-leave-active {
+  transition: opacity var(--transition-base);
+}
+
+.modal-enter-active .event-form,
+.modal-leave-active .event-form {
+  transition: transform 0.3s var(--spring), opacity var(--transition-base);
+}
+
+.modal-enter-from,
+.modal-leave-to {
+  opacity: 0;
+}
+
+.modal-enter-from .event-form {
+  transform: scale(0.96) translateY(10px);
+  opacity: 0;
+}
+
+.modal-leave-to .event-form {
+  transform: scale(0.98) translateY(6px);
+  opacity: 0;
 }
 </style>
