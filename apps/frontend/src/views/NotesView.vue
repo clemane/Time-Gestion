@@ -655,7 +655,7 @@ onMounted(async () => {
 /* FAB */
 .fab {
   position: fixed;
-  bottom: calc(80px + var(--safe-area-bottom));
+  bottom: calc(100px + var(--safe-area-bottom));
   right: 20px;
   width: 56px;
   height: 56px;
@@ -665,7 +665,7 @@ onMounted(async () => {
   border: none;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
-  z-index: 50;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -700,7 +700,7 @@ onMounted(async () => {
 .sheet-content {
   background: var(--color-bg-elevated);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  padding: 12px 20px calc(24px + var(--safe-area-bottom));
+  padding: 12px 20px calc(90px + var(--safe-area-bottom));
   width: 100%;
   max-width: 500px;
   max-height: 70vh;

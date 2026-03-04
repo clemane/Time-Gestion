@@ -512,7 +512,7 @@ onMounted(async () => {
 
 .fab {
   position: fixed;
-  bottom: calc(80px + var(--safe-area-bottom, 0px));
+  bottom: calc(100px + var(--safe-area-bottom, 0px));
   right: 20px;
   width: 56px;
   height: 56px;
@@ -522,7 +522,7 @@ onMounted(async () => {
   border: none;
   cursor: pointer;
   box-shadow: var(--shadow-lg);
-  z-index: 50;
+  z-index: 110;
   display: flex;
   align-items: center;
   justify-content: center;

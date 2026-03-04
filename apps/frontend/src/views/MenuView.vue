@@ -375,7 +375,7 @@ onMounted(async () => {
 .empty-sub { font-family: var(--font-body); font-size: 14px; color: var(--color-text-tertiary); margin-top: 4px; }
 
 /* FAB */
-.fab { position: fixed; bottom: calc(80px + var(--safe-area-bottom, 0px)); right: 20px; width: 56px; height: 56px; border-radius: 16px; background: var(--color-primary); color: white; border: none; cursor: pointer; box-shadow: var(--shadow-lg); z-index: 50; display: flex; align-items: center; justify-content: center; transition: opacity 200ms ease, transform 200ms ease; -webkit-tap-highlight-color: transparent; animation: fab-in 300ms ease both; }
+.fab { position: fixed; bottom: calc(100px + var(--safe-area-bottom, 0px)); right: 20px; width: 56px; height: 56px; border-radius: 16px; background: var(--color-primary); color: white; border: none; cursor: pointer; box-shadow: var(--shadow-lg); z-index: 110; display: flex; align-items: center; justify-content: center; transition: opacity 200ms ease, transform 200ms ease; -webkit-tap-highlight-color: transparent; animation: fab-in 300ms ease both; }
 .fab:active { opacity: 0.7; }
 @keyframes fab-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
 </style>
