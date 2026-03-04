@@ -12,6 +12,7 @@ import { SyncModule } from './sync/sync.module';
 import { RecipesModule } from './recipes/recipes.module';
 import { MealPlansModule } from './meal-plans/meal-plans.module';
 import { ShoppingModule } from './shopping/shopping.module';
+import { PartnerModule } from './partner/partner.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ShoppingModule } from './shopping/shopping.module';
     RecipesModule,
     MealPlansModule,
     ShoppingModule,
+    PartnerModule,
   ],
 })
 export class AppModule {}
