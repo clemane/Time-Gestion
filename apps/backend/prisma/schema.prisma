@@ -15,16 +15,21 @@ model User {
   avatarUrl    String?  @map("avatar_url")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  notes      Note[]
-  folders    Folder[]
-  categories Category[]
-  calendars  Calendar[]
-  events     CalendarEvent[]
-  ownedShares    Share[] @relation("ShareOwner")
-  receivedShares Share[] @relation("ShareReceiver")
-  recipes       Recipe[]
-  mealSlots     MealSlot[]
-  shoppingItems ShoppingItem[]
+  notes          Note[]
+  folders        Folder[]
+  categories     Category[]
+  calendars      Calendar[]
+  events         CalendarEvent[]
+  ownedShares    Share[]         @relation("ShareOwner")
+  receivedShares Share[]         @relation("ShareReceiver")
+  recipes        Recipe[]
+  mealSlots      MealSlot[]
+  shoppingItems  ShoppingItem[]
+
+  partnerId      String?         @unique @map("partner_id") @db.Uuid
+  partner        User?           @relation("PartnerLink", fields: [partnerId], references: [id])
+  partnerOf      User?           @relation("PartnerLink")
+  partnerInvites PartnerInvite[]
 
   @@map("users")
 }
@@ -79,9 +84,9 @@ model Note {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   deletedAt     DateTime? @map("deleted_at")
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder   Folder?   @relation(fields: [folderId], references: [id])
-  category Category? @relation(fields: [categoryId], references: [id])
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder   Folder?         @relation(fields: [folderId], references: [id])
+  category Category?       @relation(fields: [categoryId], references: [id])
   events   CalendarEvent[]
 
   @@map("notes")
@@ -156,9 +161,9 @@ model Recipe {
   updatedAt    DateTime  @updatedAt @map("updated_at")
   deletedAt    DateTime? @map("deleted_at")
 
-  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  ingredients RecipeIngredient[]
-  mealSlots   MealSlot[]
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredients   RecipeIngredient[]
+  mealSlots     MealSlot[]
   shoppingItems ShoppingItem[]
 
   @@map("recipes")
@@ -210,4 +215,16 @@ model ShoppingItem {
   sourceRecipe Recipe? @relation(fields: [sourceRecipeId], references: [id])
 
   @@map("shopping_items")
+}
+
+model PartnerInvite {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  code      String   @unique @db.VarChar(6)
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("partner_invites")
 }
