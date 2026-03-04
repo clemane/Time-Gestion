@@ -1,30 +1,31 @@
-import { Controller, Post, Get, Delete, Body, UseGuards, Request } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+import { Controller, Post, Get, Delete, Body, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { PartnerService } from './partner.service';
 import { JoinPartnerDto } from './dto/join-partner.dto';
 
 @Controller('partner')
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(JwtAuthGuard)
 export class PartnerController {
   constructor(private partnerService: PartnerService) {}
 
   @Post('invite')
-  generateInvite(@Request() req) {
-    return this.partnerService.generateInvite(req.user.id);
+  generateInvite(@CurrentUser('id') userId: string) {
+    return this.partnerService.generateInvite(userId);
   }
 
   @Post('join')
-  joinPartner(@Request() req, @Body() dto: JoinPartnerDto) {
-    return this.partnerService.joinPartner(req.user.id, dto.code);
+  joinPartner(@CurrentUser('id') userId: string, @Body() dto: JoinPartnerDto) {
+    return this.partnerService.joinPartner(userId, dto.code);
   }
 
   @Get()
-  getPartner(@Request() req) {
-    return this.partnerService.getPartner(req.user.id);
+  getPartner(@CurrentUser('id') userId: string) {
+    return this.partnerService.getPartner(userId);
   }
 
   @Delete()
-  unlinkPartner(@Request() req) {
-    return this.partnerService.unlinkPartner(req.user.id);
+  unlinkPartner(@CurrentUser('id') userId: string) {
+    return this.partnerService.unlinkPartner(userId);
   }
 }

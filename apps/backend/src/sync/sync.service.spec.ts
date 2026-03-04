@@ -12,25 +12,16 @@ describe('SyncService', () => {
     findMany: jest.fn(),
   };
 
-  const mockCategory = {
-    findMany: jest.fn(),
-  };
-
-  const mockNote = {
-    findMany: jest.fn(),
-  };
-
-  const mockCalendar = {
-    findMany: jest.fn(),
-  };
-
-  const mockCalendarEvent = {
-    findMany: jest.fn(),
-  };
-
-  const mockShare = {
-    findMany: jest.fn(),
-  };
+  const mockCategory = { findMany: jest.fn() };
+  const mockNote = { findMany: jest.fn() };
+  const mockCalendar = { findMany: jest.fn() };
+  const mockCalendarEvent = { findMany: jest.fn() };
+  const mockShare = { findMany: jest.fn() };
+  const mockRecipe = { findMany: jest.fn() };
+  const mockRecipeIngredient = { findMany: jest.fn() };
+  const mockMealSlot = { findMany: jest.fn() };
+  const mockShoppingItem = { findMany: jest.fn() };
+  const mockUser = { findUnique: jest.fn() };
 
   const mockPrisma = {
     folder: mockFolder,
@@ -39,6 +30,11 @@ describe('SyncService', () => {
     calendar: mockCalendar,
     calendarEvent: mockCalendarEvent,
     share: mockShare,
+    recipe: mockRecipe,
+    recipeIngredient: mockRecipeIngredient,
+    mealSlot: mockMealSlot,
+    shoppingItem: mockShoppingItem,
+    user: mockUser,
   };
 
   beforeEach(async () => {
@@ -112,25 +108,30 @@ describe('SyncService', () => {
 
   describe('pullChanges', () => {
     it('should return all changes since timestamp', async () => {
-      const folder = { id: 'f-1', name: 'Folder', userId: 'user-1' };
-      const note = { id: 'n-1', title: 'Note', userId: 'user-1' };
+      const now = new Date();
+      const folder = { id: 'f-1', name: 'Folder', userId: 'user-1', updatedAt: now };
+      const note = { id: 'n-1', title: 'Note', userId: 'user-1', updatedAt: now };
 
+      mockUser.findUnique.mockResolvedValue({ id: 'user-1', partnerId: null });
       mockFolder.findMany.mockResolvedValue([folder]);
       mockCategory.findMany.mockResolvedValue([]);
       mockNote.findMany.mockResolvedValue([note]);
       mockCalendar.findMany.mockResolvedValue([]);
       mockCalendarEvent.findMany.mockResolvedValue([]);
       mockShare.findMany.mockResolvedValue([]);
+      mockRecipe.findMany.mockResolvedValue([]);
+      mockRecipeIngredient.findMany.mockResolvedValue([]);
+      mockMealSlot.findMany.mockResolvedValue([]);
+      mockShoppingItem.findMany.mockResolvedValue([]);
 
-      const result = await service.pullChanges(
-        'user-1',
-        '2026-01-01T00:00:00Z',
-      );
+      const result = await service.pullChanges('user-1', '2026-01-01T00:00:00Z');
 
       expect(result.changes).toHaveLength(2);
-      expect(result.changes[0]).toEqual({ entity: 'folder', data: folder });
-      expect(result.changes[1]).toEqual({ entity: 'note', data: note });
-      expect(result.serverTime).toBeDefined();
+      expect(result.changes[0].entity).toBe('folder');
+      expect(result.changes[0].entityId).toBe('f-1');
+      expect(result.changes[1].entity).toBe('note');
+      expect(result.changes[1].entityId).toBe('n-1');
+      expect(result.syncedAt).toBeDefined();
     });
   });
 });

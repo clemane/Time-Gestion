@@ -37,13 +37,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt.toISOString(),
-      },
+      user: this.toUserResponse(user),
     };
   }
 
@@ -61,13 +55,7 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt.toISOString(),
-      },
+      user: this.toUserResponse(user),
     };
   }
 
@@ -80,13 +68,18 @@ export class AuthService {
     const tokens = await this.generateTokens(user.id, user.email);
     return {
       ...tokens,
-      user: {
-        id: user.id,
-        email: user.email,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-        createdAt: user.createdAt.toISOString(),
-      },
+      user: this.toUserResponse(user),
+    };
+  }
+
+  private toUserResponse(user: { id: string; email: string; displayName: string; avatarUrl: string | null; partnerId?: string | null; createdAt: Date }) {
+    return {
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      avatarUrl: user.avatarUrl,
+      partnerId: user.partnerId ?? null,
+      createdAt: user.createdAt.toISOString(),
     };
   }
 

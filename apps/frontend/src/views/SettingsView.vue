@@ -83,6 +83,15 @@
           <template v-else>
             <span class="cal-dot" :style="{ background: cal.color }"></span>
             <span class="cal-name">{{ cal.name }}</span>
+            <button
+              v-if="partner"
+              class="cal-action-btn"
+              :class="{ shared: isCalendarShared(cal.id) }"
+              @click="toggleShareCalendar(cal)"
+              :title="isCalendarShared(cal.id) ? 'Ne plus partager' : 'Partager avec partenaire'"
+            >
+              <Users :size="16" />
+            </button>
             <button class="cal-action-btn" @click="startEdit(cal)" title="Modifier">
               <Pencil :size="16" />
             </button>
@@ -151,6 +160,76 @@
       </router-link>
     </div>
 
+    <!-- Partner -->
+    <div class="settings-section">
+      <h2 class="section-title">Partenaire</h2>
+
+      <!-- Partner linked -->
+      <div v-if="partner" class="partner-card">
+        <div class="partner-info">
+          <div class="partner-avatar">
+            {{ partner.displayName.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 2) }}
+          </div>
+          <div class="partner-details">
+            <span class="partner-name">{{ partner.displayName }}</span>
+            <span class="partner-email">{{ partner.email }}</span>
+          </div>
+        </div>
+        <button class="partner-unlink-btn" @click="unlinkPartner" :disabled="partnerLoading">
+          <UserMinus :size="16" />
+          Dissocier
+        </button>
+      </div>
+
+      <!-- No partner -->
+      <div v-else class="partner-actions">
+        <!-- Invite code display -->
+        <div v-if="inviteCode" class="invite-code-card">
+          <span class="invite-label">Code d'invitation</span>
+          <div class="invite-code-row">
+            <span class="invite-code">{{ inviteCode }}</span>
+            <button class="invite-copy-btn" @click="navigator.clipboard.writeText(inviteCode!)" title="Copier">
+              <Copy :size="16" />
+            </button>
+          </div>
+          <span class="invite-timer">Expire dans {{ inviteCountdown }}</span>
+        </div>
+
+        <!-- Join input -->
+        <div v-else-if="showJoinInput" class="join-card">
+          <input
+            v-model="joinCode"
+            type="text"
+            maxlength="6"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            class="join-input"
+            placeholder="Code a 6 chiffres"
+            @keyup.enter="joinPartner"
+          />
+          <div class="join-actions">
+            <button class="partner-btn secondary" @click="showJoinInput = false">Annuler</button>
+            <button class="partner-btn primary" @click="joinPartner" :disabled="joinCode.length !== 6 || partnerLoading">
+              <Loader2 v-if="partnerLoading" :size="16" class="spin" />
+              Rejoindre
+            </button>
+          </div>
+        </div>
+
+        <!-- Default buttons -->
+        <div v-else class="partner-btn-group">
+          <button class="partner-btn primary" @click="generateInvite" :disabled="partnerLoading">
+            <UserPlus :size="16" />
+            Inviter un partenaire
+          </button>
+          <button class="partner-btn secondary" @click="showJoinInput = true">
+            <Users :size="16" />
+            Rejoindre un partenaire
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Shared with me -->
     <div class="settings-section">
       <h2 class="section-title">Partages recus</h2>
@@ -208,7 +287,7 @@ import { useSharesStore } from '@/stores/shares';
 import { useCalendarsStore } from '@/stores/calendars';
 import { useReminders } from '@/composables/useReminders';
 import { useTheme, ACCENT_PRESETS, type ThemeMode, type AccentColor } from '@/composables/useTheme';
-import { Tag as TagIcon, ChevronRight, Check, Check as CheckIcon, X, Pencil, Trash2, Share2, FileText, FolderOpen, Calendar as CalendarIcon, Sun, Moon, Monitor, TreePine } from 'lucide-vue-next';
+import { Tag as TagIcon, ChevronRight, Check, Check as CheckIcon, X, Pencil, Trash2, Share2, FileText, FolderOpen, Calendar as CalendarIcon, Sun, Moon, Monitor, TreePine, Users, UserPlus, UserMinus, Copy, Loader2 } from 'lucide-vue-next';
 import EmptyState from '@/components/ui/EmptyState.vue';
 import type { ResourceType, Calendar } from '@time-gestion/shared';
 
@@ -225,6 +304,106 @@ const themeOptions = [
   { mode: 'totoro' as ThemeMode, label: 'Totoro', icon: TreePine },
   { mode: 'system' as ThemeMode, label: 'Systeme', icon: Monitor },
 ];
+
+// ── Partner state ──────────────────────────────────────────
+const partner = ref<{ id: string; displayName: string; email: string } | null>(null);
+const inviteCode = ref<string | null>(null);
+const inviteExpiry = ref<Date | null>(null);
+const inviteCountdown = ref('');
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
+const showJoinInput = ref(false);
+const joinCode = ref('');
+const partnerLoading = ref(false);
+
+async function loadPartner() {
+  try {
+    partner.value = await apiFetch<{ id: string; displayName: string; email: string } | null>('/partner');
+  } catch {
+    partner.value = null;
+  }
+}
+
+async function generateInvite() {
+  partnerLoading.value = true;
+  try {
+    const res = await apiFetch<{ code: string; expiresAt: string }>('/partner/invite', { method: 'POST' });
+    inviteCode.value = res.code;
+    inviteExpiry.value = new Date(res.expiresAt);
+    showJoinInput.value = false;
+    startCountdown();
+  } finally {
+    partnerLoading.value = false;
+  }
+}
+
+function startCountdown() {
+  if (countdownInterval) clearInterval(countdownInterval);
+  updateCountdown();
+  countdownInterval = setInterval(updateCountdown, 1000);
+}
+
+function updateCountdown() {
+  if (!inviteExpiry.value) return;
+  const remaining = Math.max(0, inviteExpiry.value.getTime() - Date.now());
+  if (remaining <= 0) {
+    inviteCode.value = null;
+    inviteExpiry.value = null;
+    inviteCountdown.value = '';
+    if (countdownInterval) clearInterval(countdownInterval);
+    return;
+  }
+  const min = Math.floor(remaining / 60000);
+  const sec = Math.floor((remaining % 60000) / 1000);
+  inviteCountdown.value = `${min}:${String(sec).padStart(2, '0')}`;
+}
+
+async function joinPartner() {
+  if (joinCode.value.length !== 6) return;
+  partnerLoading.value = true;
+  try {
+    await apiFetch('/partner/join', { method: 'POST', body: JSON.stringify({ code: joinCode.value }) });
+    await loadPartner();
+    joinCode.value = '';
+    showJoinInput.value = false;
+  } finally {
+    partnerLoading.value = false;
+  }
+}
+
+async function unlinkPartner() {
+  partnerLoading.value = true;
+  try {
+    await apiFetch('/partner', { method: 'DELETE' });
+    partner.value = null;
+  } finally {
+    partnerLoading.value = false;
+  }
+}
+
+// ── Calendar sharing with partner ──────────────────────────
+const myShares = computed(() =>
+  sharesStore.sharedWithMe.filter(s => s.resourceType === 'CALENDAR'),
+);
+
+function isCalendarShared(calendarId: string): boolean {
+  return myShares.value.some(s => s.resourceId === calendarId);
+}
+
+async function toggleShareCalendar(cal: Calendar) {
+  if (!partner.value) return;
+  const existing = myShares.value.find(s => s.resourceId === cal.id);
+  if (existing) {
+    await sharesStore.removeShare(existing.id);
+  } else {
+    await sharesStore.createShare({
+      resourceType: 'CALENDAR',
+      resourceId: cal.id,
+      sharedWithEmail: partner.value.email,
+      permission: 'WRITE',
+    });
+  }
+  await sharesStore.loadSharedWithMe();
+}
 
 const initials = computed(() => {
   if (!auth.user?.displayName) return '?';
@@ -350,6 +529,7 @@ onMounted(async () => {
   sharesStore.loadSharedWithMe();
   await calendarsStore.loadFromLocal();
   loadNotificationPref();
+  loadPartner();
 });
 </script>
 
@@ -860,6 +1040,228 @@ onMounted(async () => {
   font-size: 13px;
   color: var(--color-text-tertiary);
   flex-shrink: 0;
+}
+
+/* ── Partner section ──────────────────────────────────────── */
+
+.partner-card {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.partner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.partner-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.partner-details {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.partner-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.partner-email {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.partner-unlink-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 0.5px solid var(--color-danger);
+  border-radius: var(--radius);
+  color: var(--color-danger);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.partner-unlink-btn:active {
+  background: var(--color-danger-ghost);
+}
+
+.partner-unlink-btn:disabled {
+  opacity: 0.5;
+}
+
+.partner-actions {
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+}
+
+.partner-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.partner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity var(--transition-fast);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.partner-btn:active {
+  opacity: 0.7;
+}
+
+.partner-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.partner-btn.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.partner-btn.secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text);
+}
+
+.invite-code-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.invite-label {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.invite-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invite-code {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  font-family: var(--font-mono, monospace);
+  color: var(--color-primary);
+}
+
+.invite-copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-full);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.invite-copy-btn:active {
+  background: var(--color-bg-secondary);
+}
+
+.invite-timer {
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.join-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.join-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 0.5px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: 24px;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 8px;
+  font-family: var(--font-mono, monospace);
+  box-sizing: border-box;
+}
+
+.join-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.join-input::placeholder {
+  font-size: 15px;
+  letter-spacing: 0;
+  font-weight: 400;
+  font-family: var(--font-body);
+}
+
+.join-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.join-actions .partner-btn {
+  flex: 1;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.cal-action-btn.shared {
+  color: var(--color-primary);
 }
 
 /* ── Logout button ────────────────────────────────────────── */
