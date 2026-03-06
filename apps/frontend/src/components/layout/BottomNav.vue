@@ -1,5 +1,6 @@
 <template>
-  <nav class="floating-nav">
+  <Transition name="nav-slide">
+  <nav v-show="navVisible" class="floating-nav">
     <RouterLink
       v-for="item in navItems"
       :key="item.to"
@@ -11,11 +12,15 @@
       <span class="nav-label">{{ item.label }}</span>
     </RouterLink>
   </nav>
+  </Transition>
 </template>
 
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router';
 import { Home, FileText, Calendar, UtensilsCrossed, Settings } from 'lucide-vue-next';
+import { useNavVisibility } from '@/composables/useNavVisibility';
+
+const { navVisible } = useNavVisibility();
 
 const route = useRoute();
 
@@ -74,6 +79,17 @@ function isActive(path: string): boolean {
 
 .nav-label {
   line-height: 1;
+}
+
+.nav-slide-enter-active,
+.nav-slide-leave-active {
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease;
+}
+
+.nav-slide-enter-from,
+.nav-slide-leave-to {
+  transform: translateX(-50%) translateY(100%);
+  opacity: 0;
 }
 
 /* Hide on desktop */

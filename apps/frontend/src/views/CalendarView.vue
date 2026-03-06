@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useEventsStore } from '@/stores/events';
 import { useCalendarsStore } from '@/stores/calendars';
@@ -102,6 +102,7 @@ import WeekView from '@/components/calendar/WeekView.vue';
 import AgendaView from '@/components/calendar/AgendaView.vue';
 import EventForm from '@/components/calendar/EventForm.vue';
 import { Calendar as CalendarIcon, FileText, Plus, Search } from 'lucide-vue-next';
+import { useNavVisibility } from '@/composables/useNavVisibility';
 import type { CalendarEvent } from '@time-gestion/shared';
 
 const router = useRouter();
@@ -123,7 +124,9 @@ const selectedDate = ref(new Date().toISOString().split('T')[0]);
 const selectedGroupId = ref<string | null>(null);
 const showSearch = ref(false);
 const searchQuery = ref('');
+const { hideNav, showNav } = useNavVisibility();
 const showEventForm = ref(false);
+watch(showEventForm, (open) => open ? hideNav() : showNav());
 const editingEvent = ref<CalendarEvent | null>(null);
 
 const selectedDayItems = computed(() => {

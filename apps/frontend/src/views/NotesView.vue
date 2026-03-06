@@ -182,7 +182,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useNotesStore } from '@/stores/notes';
 import { useFoldersStore } from '@/stores/folders';
@@ -196,6 +196,7 @@ import SkeletonCard from '@/components/ui/SkeletonCard.vue';
 import EmptyState from '@/components/ui/EmptyState.vue';
 import SwipeAction from '@/components/ui/SwipeAction.vue';
 import { FolderOpen, Plus, FileText, Search } from 'lucide-vue-next';
+import { useNavVisibility } from '@/composables/useNavVisibility';
 
 const router = useRouter();
 const notesStore = useNotesStore();
@@ -217,7 +218,9 @@ const selectedFolderId = ref<string | null>(null);
 const selectedGroupId = ref<string | null>(null);
 const activeTag = ref<string | null>(null);
 const showFolders = ref(false);
+const { hideNav, showNav } = useNavVisibility();
 const showNewNoteSheet = ref(false);
+watch(showNewNoteSheet, (open) => open ? hideNav() : showNav());
 const loading = ref(true);
 
 const categories = computed(() => categoriesStore.categories);
