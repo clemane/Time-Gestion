@@ -174,21 +174,33 @@ onMounted(() => {
   inset: 0;
   background: rgba(44, 37, 32, 0.3);
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   z-index: 300;
-  padding: 16px;
 }
 
 .event-form {
   background: var(--color-bg-elevated);
-  border-radius: var(--radius-xl);
-  padding: 24px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: 20px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   width: 100%;
   max-width: 420px;
-  max-height: 90vh;
+  max-height: 92vh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   box-shadow: var(--shadow-overlay);
+}
+
+@media (min-width: 600px) {
+  .modal-overlay {
+    align-items: center;
+    padding: 16px;
+  }
+  .event-form {
+    border-radius: var(--radius-xl);
+    padding: 24px;
+    max-height: 90vh;
+  }
 }
 
 .event-form header {
@@ -370,12 +382,10 @@ onMounted(() => {
 }
 
 .modal-enter-from .event-form {
-  transform: scale(0.96) translateY(10px);
-  opacity: 0;
+  transform: translateY(100%);
 }
 
 .modal-leave-to .event-form {
-  transform: scale(0.98) translateY(6px);
-  opacity: 0;
+  transform: translateY(100%);
 }
 </style>
