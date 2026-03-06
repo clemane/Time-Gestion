@@ -18,9 +18,9 @@
 <script setup lang="ts">
 import { useRoute, RouterLink } from 'vue-router';
 import { Home, FileText, Calendar, UtensilsCrossed, Settings } from 'lucide-vue-next';
-import { useNavVisibility } from '@/composables/useNavVisibility';
+import { useNavVisible } from '@/composables/useNavVisibility';
 
-const { navVisible } = useNavVisibility();
+const { navVisible } = useNavVisible();
 
 const route = useRoute();
 
