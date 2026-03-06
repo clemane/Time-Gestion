@@ -149,7 +149,7 @@
     </div>
 
     <!-- FAB -->
-    <button class="fab" @click="createNote()">
+    <button class="fab" @click="haptic.light(); showNewNoteSheet = true">
       <Plus :size="24" />
     </button>
 

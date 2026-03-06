@@ -11,7 +11,7 @@ export async function pushPendingChanges() {
     entity: op.entity as 'note' | 'folder' | 'category' | 'calendar' | 'event' | 'share' | 'recipe' | 'recipeIngredient' | 'mealSlot' | 'shoppingItem',
     entityId: op.entityId,
     action: op.action as 'CREATE' | 'UPDATE' | 'DELETE',
-    payload: op.payload,
+    data: op.payload,
     timestamp: op.timestamp,
   }));
 
